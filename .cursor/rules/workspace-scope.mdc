@@ -1,0 +1,32 @@
+---
+description: Restrict all agent file and shell operations to this project directory only
+alwaysApply: true
+---
+
+# Workspace scope — REIT Assistant only
+
+**Effective immediately.** The agent/build bot must NOT use full-system or root-level access.
+
+## Allowed scope
+
+- **Only** `/Users/nancyfletcher/Documents/reit-assistant-fqe` and its subdirectories
+- All reads, writes, edits, deletes, and terminal `cwd` must stay within this tree
+
+## Blocked (do not access or modify)
+
+- System folders (`/System`, `/usr`, `/etc`, `/var`, etc.)
+- User home outside this project (`~` except paths under `reit-assistant-fqe`)
+- Unrelated projects (e.g. other repos under `~/Documents/`)
+- `deliverables/` mockups/prototype (design reference is in `docs/` only)
+- Global git config, global npm config, or machine-wide installs unless the user explicitly overrides in chat
+
+## Shell commands
+
+- Set `working_directory` to the project root or a subdirectory
+- Do not run commands that write outside the project (e.g. `cp` to `~/Downloads`, `rm -rf` outside scope)
+- Prefer project-relative paths only
+
+## If a task requires out-of-scope access
+
+- Stop and tell the user what is needed and why
+- Do not proceed without explicit approval

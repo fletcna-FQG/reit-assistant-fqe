@@ -1,41 +1,104 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
-# dependencies
+# Dependencies
 node_modules/
 
-# Expo
+# Expo / Metro / React Native build output
 .expo/
+.expo-shared/
 dist/
 web-build/
-expo-env.d.ts
+build/
+*.hbc
+*.jsbundle
 
-# Native
-.kotlin/
-*.orig.*
+# Native generated (prebuild output — regenerate with `npx expo prebuild`)
+/ios/
+/android/
+
+# Environment & secrets (never commit)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# TypeScript / tooling caches
+*.tsbuildinfo
+.tsc-cache/
+.eslintcache
+
+# Metro
+.metro-health-check*
+
+# npm / yarn logs
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+pnpm-debug.log*
+
+# macOS / OS junk
+.DS_Store
+**/.DS_Store
+Thumbs.db
+*.pem
+
+# IDE / editor (local only)
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Cursor / agent local state (do not commit machine-specific paths)
+.cursor/projects/
+.cursor/**/*.jsonl
+*.agent-transcript*
+agent-transcripts/
+
+# Previous agent session artifacts — exclude from Beta (re-ignore if recreated)
+.claude/
+**/.claude/
+CLAUDE.md
+**/CLAUDE.md
+
+# Design deliverables not required for Beta binary (reference lives in docs/)
+deliverables/
+**/mockups/
+**/prototype/
+*.html
+
+# Temporary / cache / logs
+tmp/
+temp/
+.cache/
+*.log
+*.tmp
+*.temp
+coverage/
+.nyc_output/
+
+# EAS
+.eas/
+
+# Keys & signing (never commit)
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
+*.orig.*
+.kotlin/
 
-# Metro
-.metro-health-check*
+# Prevent accidental copies from outside the project root
+**/Users/nancyfletcher/**
+**/Users/*/
+home/
+Downloads/
+../
+**/../**
 
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
+# Lockfiles from other package managers (keep package-lock.json)
+yarn.lock
+pnpm-lock.yaml
+bun.lockb
 
-# macOS
-.DS_Store
-*.pem
-
-# local env files
-.env*.local
-
-# typescript
-*.tsbuildinfo
-
-# generated native folders
-/ios
-/android
+# Optional: auto-generated Expo types (regenerated on start)
+expo-env.d.ts
