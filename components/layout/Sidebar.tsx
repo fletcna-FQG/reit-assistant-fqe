@@ -1,5 +1,5 @@
 import { NavIcon } from '@/components/navigation/NavIcon';
-import { BRAND, NAV_ITEMS, SECONDARY_NAV } from '@/constants/navigation';
+import { BRAND, NAV_ITEMS, SETTINGS_HREF } from '@/constants/navigation';
 import { colors, layout, shadows } from '@/constants/theme';
 import { useLeftHanded } from '@/hooks/useLeftHanded';
 import { Link, usePathname } from 'expo-router';
@@ -11,8 +11,13 @@ export function Sidebar() {
 
   const isActive = (routeName: string) => {
     const segment = pathname.split('/').filter(Boolean).pop() ?? 'index';
+    const inAnalyzeFlow = pathname.includes('/property/') || pathname.includes('/analysis/');
+
     if (routeName === 'index') {
-      return segment === 'index' || segment === '(tabs)' || pathname === '/';
+      return segment === 'index' || pathname.endsWith('/(tabs)') || pathname === '/';
+    }
+    if (routeName === 'analyze') {
+      return segment === 'analyze' || inAnalyzeFlow;
     }
     return segment === routeName;
   };
@@ -29,10 +34,7 @@ export function Sidebar() {
       }}
     >
       <View className="flex-row items-center gap-3 border-b border-medium-gray px-md py-lg">
-        <View
-          className="items-center justify-center rounded-xl bg-navy"
-          style={{ width: 40, height: 40 }}
-        >
+        <View className="items-center justify-center rounded-xl bg-navy" style={{ width: 40, height: 40 }}>
           <Text className="text-lg font-bold text-white">FQ</Text>
         </View>
         <View className="flex-1">
@@ -48,15 +50,10 @@ export function Sidebar() {
             <Link key={item.name} href={item.href} asChild>
               <Pressable
                 className="flex-row items-center gap-3 rounded-sm px-md py-3"
-                style={{
-                  backgroundColor: active ? `${colors.navy}14` : 'transparent',
-                }}
+                style={{ backgroundColor: active ? `${colors.navy}14` : 'transparent' }}
               >
                 <NavIcon name={item.icon} focused={active} />
-                <Text
-                  className="text-body-small font-semibold"
-                  style={{ color: active ? colors.navy : colors.textPrimary }}
-                >
+                <Text className="text-body-small font-semibold" style={{ color: active ? colors.navy : colors.textPrimary }}>
                   {item.title}
                 </Text>
               </Pressable>
@@ -66,17 +63,10 @@ export function Sidebar() {
       </View>
 
       <View className="border-t border-medium-gray px-sm py-md">
-        {SECONDARY_NAV.map((item) => (
-          <Link key={item.name} href={item.href} asChild>
-            <Pressable className="mb-1 flex-row items-center gap-3 rounded-sm px-md py-3">
-              <Text className="text-body-small font-semibold text-text-primary">{item.title}</Text>
-            </Pressable>
-          </Link>
-        ))}
-        <Link href="/(app)/(tabs)/profile" asChild>
+        <Link href={SETTINGS_HREF} asChild>
           <Pressable className="flex-row items-center gap-3 rounded-sm px-md py-3">
             <NavIcon name="profile" />
-            <Text className="text-body-small font-semibold text-text-primary">Profile</Text>
+            <Text className="text-body-small font-semibold text-text-primary">Profile & Settings</Text>
           </Pressable>
         </Link>
       </View>

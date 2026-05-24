@@ -1,4 +1,7 @@
-import * as SecureStore from 'expo-secure-store';
+import {
+  getPersistentItem,
+  setPersistentItem,
+} from '@/utils/persistentStorage';
 import {
   createContext,
   useCallback,
@@ -25,7 +28,7 @@ export function LeftHandedProvider({ children }: { children: ReactNode }) {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    SecureStore.getItemAsync(STORAGE_KEY)
+    getPersistentItem(STORAGE_KEY)
       .then((value) => {
         if (value === 'true') setIsLeftHanded(true);
       })
@@ -34,7 +37,7 @@ export function LeftHandedProvider({ children }: { children: ReactNode }) {
 
   const persist = useCallback(async (value: boolean) => {
     setIsLeftHanded(value);
-    await SecureStore.setItemAsync(STORAGE_KEY, value ? 'true' : 'false');
+    await setPersistentItem(STORAGE_KEY, value ? 'true' : 'false');
   }, []);
 
   const toggleLeftHanded = useCallback(() => {

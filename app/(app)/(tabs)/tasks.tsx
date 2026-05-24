@@ -1,113 +1,122 @@
-import { TaskCard } from '@/components/TaskCard';
+import { DealStateTile } from '@/components/tasks/DealStateTile';
+import { DealsTable } from '@/components/tasks/DealsTable';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
-import { Modal } from '@/components/ui/Modal';
-import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { TextField } from '@/components/ui/TextField';
-import { colors } from '@/constants/theme';
-import { createTask, getTasks, updateTaskStatus } from '@/services/api';
-import type { Task } from '@/types/task';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
-
-const COLUMNS: { key: Task['status']; label: string }[] = [
-  { key: 'pending', label: 'Pending' },
-  { key: 'in_progress', label: 'In Progress' },
-  { key: 'completed', label: 'Completed' },
-  { key: 'cancelled', label: 'Cancelled' },
-];
+import {
+  DEFAULT_TASK_DEAL_STATES,
+  TASK_DEAL_STATE_TILES,
+} from '@/constants/deals';
+import { colors, layout } from '@/constants/theme';
+import { useDealState } from '@/hooks/useDealState';
+import { getDeals } from '@/services/api';
+import type { DealStatus } from '@/types/index';
+import { useQuery } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 
 export default function TasksScreen() {
-  const queryClient = useQueryClient();
-  const [modalVisible, setModalVisible] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
+  const { setDealState } = useDealState();
+  const [selectedState, setSelectedState] = useState<DealStatus | null>(null);
 
-  const { data: tasks = [], isLoading } = useQuery({
-    queryKey: ['tasks'],
-    queryFn: getTasks,
+  const {
+    data: deals = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ['deals', 'tasks-view'],
+    queryFn: () => getDeals(),
   });
 
-  const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: Task['status'] }) =>
-      updateTaskStatus(id, status),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] }),
-  });
+  const activeStates = selectedState ? [selectedState] : DEFAULT_TASK_DEAL_STATES;
 
-  const createMutation = useMutation({
-    mutationFn: () =>
-      createTask({
-        title: newTitle,
-        assignee: 'Nancy Fletcher',
-        assigneeInitials: 'NF',
-        dueDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
-        priority: 'medium',
-        status: 'pending',
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      setModalVisible(false);
-      setNewTitle('');
-    },
-  });
+  const filteredDeals = useMemo(
+    () => deals.filter((deal) => activeStates.includes(deal.status)),
+    [deals, activeStates],
+  );
 
-  const cycleStatus = (task: Task) => {
-    const order: Task['status'][] = ['pending', 'in_progress', 'completed', 'cancelled'];
-    const idx = order.indexOf(task.status);
-    const next = order[(idx + 1) % order.length];
-    statusMutation.mutate({ id: task.id, status: next });
+  const dealCounts = useMemo(() => {
+    const counts: Record<DealStatus, number> = {
+      pipeline: 0,
+      review: 0,
+      approved: 0,
+      closed: 0,
+    };
+    for (const deal of deals) {
+      counts[deal.status] += 1;
+    }
+    return counts;
+  }, [deals]);
+
+  const activeLabel = selectedState
+    ? TASK_DEAL_STATE_TILES.find((tile) => tile.dealStatus === selectedState)?.label ??
+      TASK_DEAL_STATE_TILES.find((tile) => tile.dealStatus === selectedState)?.subtitle
+    : 'New / Pending';
+
+  const handleSelectState = (status: DealStatus) => {
+    if (selectedState === status) {
+      setSelectedState(null);
+      return;
+    }
+    setSelectedState(status);
+    setDealState(status);
   };
 
   return (
     <View className="flex-1 bg-light-gray">
-      <ScreenHeader
-        title="Tasks"
-        right={
-          <Pressable onPress={() => setModalVisible(true)}>
-            <Text className="font-semibold text-navy">+ Add</Text>
-          </Pressable>
-        }
-      />
-      {isLoading ? (
-        <ActivityIndicator color={colors.navy} className="mt-xl" />
-      ) : (
-        <ScrollView horizontal className="flex-1" contentContainerClassName="p-md">
-          {COLUMNS.map((column) => {
-            const columnTasks = tasks.filter((t) => t.status === column.key);
-            return (
-              <View key={column.key} className="mr-md w-72">
-                <Text className="mb-sm text-h4 text-navy">
-                  {column.label} ({columnTasks.length})
-                </Text>
-                <View className="min-h-[200px] rounded-md bg-white/50 p-2">
-                  {columnTasks.map((task) => (
-                    <Pressable key={task.id} onLongPress={() => cycleStatus(task)}>
-                      <TaskCard task={task} />
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            );
-          })}
-        </ScrollView>
-      )}
+      <ScreenHeader title="Tasks" />
 
-      <Modal
-        visible={modalVisible}
-        title="Add New Task"
-        onClose={() => setModalVisible(false)}
-        footer={
-          <PrimaryButton
-            title="Create Task"
-            onPress={() => createMutation.mutate()}
-            loading={createMutation.isPending}
-          />
-        }
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: layout.bottomNavHeight + 16 }}
       >
-        <TextField label="Task Title" value={newTitle} onChangeText={setNewTitle} />
-        <Text className="text-caption text-text-secondary">
-          Long-press a task card to move it to the next column
-        </Text>
-      </Modal>
+        <View className="border-b border-medium-gray bg-white px-md py-md">
+          <Text className="mb-3 text-body-small text-text-secondary">
+            Select a deal state to filter deals. When none is selected, New / Pending deals are shown.
+          </Text>
+          <View className="flex-row gap-2">
+            {TASK_DEAL_STATE_TILES.map((tile) => (
+              <View key={tile.dealStatus} className="min-w-0 flex-1">
+                <DealStateTile
+                  dealStatus={tile.dealStatus}
+                  label={tile.label}
+                  subtitle={tile.subtitle}
+                  count={dealCounts[tile.dealStatus]}
+                  selected={selectedState === tile.dealStatus}
+                  onPress={() => handleSelectState(tile.dealStatus)}
+                />
+              </View>
+            ))}
+          </View>
+        </View>
+
+        <View className="flex-row items-center justify-between px-md pt-md">
+          <Text className="text-h4 text-navy">{activeLabel} Deals</Text>
+          <Text className="text-caption text-text-secondary">
+            {filteredDeals.length} deal{filteredDeals.length === 1 ? '' : 's'}
+          </Text>
+        </View>
+
+        {isLoading ? (
+          <ActivityIndicator color={colors.navy} className="mt-xl" />
+        ) : isError ? (
+          <View className="mx-md mt-md rounded-md bg-white p-lg">
+            <Text className="text-center text-body-small text-text-secondary">
+              Could not load deals. Check that the backend is running, then try again.
+            </Text>
+            <Text
+              className="mt-2 text-center text-body-small font-semibold text-navy"
+              onPress={() => void refetch()}
+            >
+              Retry
+            </Text>
+          </View>
+        ) : (
+          <DealsTable
+            deals={filteredDeals}
+            emptyMessage={`No ${activeLabel?.toLowerCase()} deals yet.`}
+          />
+        )}
+      </ScrollView>
     </View>
   );
 }

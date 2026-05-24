@@ -1,7 +1,8 @@
+import { ReitRulesIcon } from '@/components/navigation/ReitRulesIcon';
 import { colors, icons } from '@/constants/theme';
 import Svg, { Circle, Path, Polyline, Rect } from 'react-native-svg';
 
-type NavIconName = 'home' | 'deals' | 'analyze' | 'tasks' | 'profile';
+type NavIconName = 'home' | 'rules' | 'deals' | 'analyze' | 'tasks' | 'profile';
 
 type NavIconProps = {
   name: NavIconName;
@@ -20,6 +21,8 @@ export function NavIcon({
   const sw = icons.strokeWidth;
 
   switch (name) {
+    case 'rules':
+      return <ReitRulesIcon size={size} focused={focused} />;
     case 'home':
       return (
         <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">

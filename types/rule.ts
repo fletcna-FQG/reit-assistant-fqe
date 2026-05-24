@@ -15,6 +15,8 @@ export interface InvestmentRule {
   scoreImpact: number;
   active: boolean;
   priority: number;
+  /** Out-of-box rules: toggle only — cannot delete */
+  isSystem?: boolean;
 }
 
 export interface TriggeredRule {

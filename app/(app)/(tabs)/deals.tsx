@@ -1,16 +1,15 @@
 import { DealCard } from '@/components/DealCard';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
+import { DEAL_PROPERTY_FILTERS } from '@/constants/deals';
 import { colors } from '@/constants/theme';
 import { getDeals } from '@/services/api';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
-
-const FILTERS = ['All', 'Multifamily', 'Commercial', 'Industrial', 'Retail'];
+import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 export default function DealsScreen() {
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('All');
+  const [filter, setFilter] = useState<string>('All');
 
   const { data: deals = [], isLoading } = useQuery({
     queryKey: ['deals', search, filter],
@@ -29,8 +28,8 @@ export default function DealsScreen() {
           value={search}
           onChangeText={setSearch}
         />
-        <View className="flex-row flex-wrap gap-2">
-          {FILTERS.map((f) => (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2 pb-1">
+          {DEAL_PROPERTY_FILTERS.map((f) => (
             <Pressable
               key={f}
               onPress={() => setFilter(f)}
@@ -47,7 +46,7 @@ export default function DealsScreen() {
               </Text>
             </Pressable>
           ))}
-        </View>
+        </ScrollView>
       </View>
       {isLoading ? (
         <ActivityIndicator color={colors.navy} className="mt-xl" />
@@ -60,6 +59,11 @@ export default function DealsScreen() {
           initialNumToRender={10}
           maxToRenderPerBatch={10}
           windowSize={5}
+          ListEmptyComponent={
+            <Text className="text-center text-body-small text-text-secondary">
+              No deals match this property type filter.
+            </Text>
+          }
         />
       )}
     </View>

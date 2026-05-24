@@ -6,12 +6,14 @@ type TextFieldProps = TextInputProps & {
   label: string;
   error?: string;
   shakeTrigger?: number;
+  required?: boolean;
 };
 
 export function TextField({
   label,
   error,
   shakeTrigger = 0,
+  required = false,
   style,
   ...props
 }: TextFieldProps) {
@@ -19,7 +21,10 @@ export function TextField({
 
   return (
     <View className="mb-md">
-      <Text className="mb-1 text-body-small font-semibold text-text-primary">{label}</Text>
+      <Text className="mb-1 text-body-small font-semibold text-text-primary">
+        {label}
+        {required ? <Text className="text-alert-red"> *</Text> : null}
+      </Text>
       <ShakeView trigger={shakeTrigger}>
         <TextInput
           className="rounded-sm bg-white px-md text-body text-text-primary"

@@ -2,6 +2,7 @@ import { BarChart } from '@/components/charts/BarChart';
 import { FloatingActionButton } from '@/components/layout/FloatingActionButton';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { KPICard } from '@/components/KPICard';
+import { SETTINGS_HREF } from '@/constants/navigation';
 import { colors } from '@/constants/theme';
 import {
   getCapRateDistribution,
@@ -10,7 +11,7 @@ import {
 } from '@/services/api';
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 
 const activityIcons = {
   deal: '📋',
@@ -36,7 +37,14 @@ export default function DashboardScreen() {
 
   return (
     <View className="flex-1 bg-light-gray">
-      <ScreenHeader title="Dashboard" />
+      <ScreenHeader
+        title="Dashboard"
+        right={
+          <Pressable onPress={() => router.push(SETTINGS_HREF)} accessibilityLabel="Profile and Settings">
+            <Text className="text-body-small font-semibold text-navy">Settings</Text>
+          </Pressable>
+        }
+      />
       <ScrollView className="flex-1" contentContainerClassName="pb-28 p-md">
         <Text className="mb-1 text-h3 text-navy">Good Evening, Nancy</Text>
         <Text className="mb-lg text-body-small text-text-secondary">

@@ -1,6 +1,6 @@
 import type { AnalysisResult } from '@/types/analysis';
 import type { PortfolioKPIs, ActivityItem, CapRateDistribution } from '@/types/api';
-import type { Deal, DealDetail } from '@/types/deal';
+import type { Deal, DealDetail, DealDocument } from '@/types/deal';
 import type { InvestmentRule } from '@/types/rule';
 import type { Task } from '@/types/task';
 
@@ -59,6 +59,8 @@ export const MOCK_DEALS: Deal[] = [
     status: 'pipeline',
     propertyType: 'Multifamily',
     units: 32,
+    recommendation: 'BUY',
+    score: 81,
     createdAt: '2026-05-16',
   },
   {
@@ -71,7 +73,9 @@ export const MOCK_DEALS: Deal[] = [
     priceChange: 0.8,
     capRate: 7.2,
     status: 'approved',
-    propertyType: 'Commercial',
+    propertyType: 'Mixed-Use',
+    recommendation: 'NEGOTIATE',
+    score: 72,
     createdAt: '2026-05-15',
   },
   {
@@ -84,6 +88,8 @@ export const MOCK_DEALS: Deal[] = [
     capRate: 6.1,
     status: 'closed',
     propertyType: 'Retail',
+    recommendation: 'HOLD',
+    score: 65,
     createdAt: '2026-05-10',
   },
 ];
@@ -99,6 +105,7 @@ export const MOCK_DEAL_DETAIL: DealDetail = {
   loanTerm: 30,
   dscr: 1.35,
   recommendation: 'BUY',
+  analysisId: undefined,
   documents: [
     { id: 'd1', name: 'Purchase Agreement.pdf', type: 'pdf', size: '2.4 MB' },
     { id: 'd2', name: 'Financial Pro Forma.xlsx', type: 'xlsx', size: '890 KB' },
@@ -182,6 +189,7 @@ export const MOCK_RULES: InvestmentRule[] = [
     scoreImpact: 15,
     active: true,
     priority: 1,
+    isSystem: true,
   },
   {
     id: 'r2',
@@ -192,6 +200,7 @@ export const MOCK_RULES: InvestmentRule[] = [
     scoreImpact: 10,
     active: true,
     priority: 2,
+    isSystem: true,
   },
   {
     id: 'r3',
@@ -202,6 +211,7 @@ export const MOCK_RULES: InvestmentRule[] = [
     scoreImpact: 20,
     active: true,
     priority: 3,
+    isSystem: true,
   },
   {
     id: 'r4',
@@ -212,6 +222,7 @@ export const MOCK_RULES: InvestmentRule[] = [
     scoreImpact: 8,
     active: true,
     priority: 4,
+    isSystem: true,
   },
   {
     id: 'r5',
@@ -222,10 +233,13 @@ export const MOCK_RULES: InvestmentRule[] = [
     scoreImpact: 12,
     active: false,
     priority: 5,
+    isSystem: true,
   },
 ];
 
 let analysisStore: AnalysisResult[] = [];
+
+const dealDocumentsStore: Record<string, DealDocument[]> = {};
 
 export function saveAnalysis(result: AnalysisResult) {
   analysisStore = [result, ...analysisStore.filter((a) => a.id !== result.id)];
@@ -236,8 +250,28 @@ export function getAnalysis(id: string) {
   return analysisStore.find((a) => a.id === id) ?? null;
 }
 
+export function updateDealStatusInStore(id: string, status: Deal['status']) {
+  const deal = MOCK_DEALS.find((d) => d.id === id);
+  if (deal) deal.status = status;
+}
+
+export function addDealDocumentToStore(dealId: string, doc: DealDocument) {
+  if (!dealDocumentsStore[dealId]) dealDocumentsStore[dealId] = [];
+  dealDocumentsStore[dealId].push(doc);
+}
+
 export function getDealDetail(id: string): DealDetail {
-  if (id === '1') return MOCK_DEAL_DETAIL;
   const deal = MOCK_DEALS.find((d) => d.id === id) ?? MOCK_DEALS[0];
-  return { ...MOCK_DEAL_DETAIL, ...deal, id };
+  const base: DealDetail =
+    id === '1'
+      ? { ...MOCK_DEAL_DETAIL }
+      : { ...MOCK_DEAL_DETAIL, ...deal, id: deal.id };
+
+  return {
+    ...base,
+    ...deal,
+    id: deal.id,
+    status: deal.status,
+    documents: [...base.documents, ...(dealDocumentsStore[id] ?? [])],
+  };
 }

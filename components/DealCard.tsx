@@ -35,17 +35,21 @@ export function DealCard({ deal }: DealCardProps) {
       <Text className="text-h4 text-text-primary">
         {deal.address}, {deal.city}, {deal.state}
       </Text>
-      <View className="mt-2 flex-row items-center justify-between">
-        <Text className="text-body font-bold" style={{ color: priceColor }}>
-          ${(deal.price / 1_000_000).toFixed(1)}M
-          {deal.priceChange !== undefined
-            ? ` ${deal.priceChange >= 0 ? '▲' : '▼'}${Math.abs(deal.priceChange).toFixed(1)}%`
-            : ''}
-        </Text>
-        <View className="flex-row gap-2">
+      <Text className="mt-1 text-body font-bold" style={{ color: priceColor }}>
+        ${(deal.price / 1_000_000).toFixed(1)}M
+        {deal.priceChange !== undefined
+          ? ` ${deal.priceChange >= 0 ? '▲' : '▼'}${Math.abs(deal.priceChange).toFixed(1)}%`
+          : ''}
+      </Text>
+      <View className="mt-2 flex-row flex-wrap items-center gap-2">
           <Badge label={`${deal.capRate.toFixed(1)}% Cap`} variant="navy" />
+          {deal.recommendation ? (
+            <Badge
+              label={`${deal.recommendation}${deal.score != null ? ` · ${deal.score}` : ''}`}
+              variant="emerald"
+            />
+          ) : null}
           <Badge label={statusLabels[deal.status]} variant={deal.status === 'approved' ? 'emerald' : deal.status === 'pipeline' ? 'amber' : 'navy'} />
-        </View>
       </View>
     </Pressable>
   );

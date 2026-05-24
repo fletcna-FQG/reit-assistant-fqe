@@ -1,5 +1,5 @@
 import { colors } from '@/constants/theme';
-import * as Haptics from 'expo-haptics';
+import { lightHaptic } from '@/utils/lightHaptic';
 import {
   ActivityIndicator,
   Pressable,
@@ -28,7 +28,7 @@ export function PrimaryButton({
     <Pressable
       disabled={disabled || loading}
       onPress={(event) => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        lightHaptic();
         onPress?.(event);
       }}
       className="mb-sm items-center justify-center rounded-sm"

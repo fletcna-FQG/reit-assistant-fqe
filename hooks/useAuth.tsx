@@ -1,4 +1,6 @@
 import * as authService from '@/services/auth';
+import { setOnAuthExpired } from '@/services/api';
+import { isBackendConfigured } from '@/config/env';
 import { isSupabaseConfigured, supabase } from '@/services/supabase';
 import type { AuthSession } from '@/types/auth';
 import { AuthError } from '@/types/auth';
@@ -17,6 +19,7 @@ type AuthContextValue = {
   isLoading: boolean;
   isAuthenticated: boolean;
   isDemoMode: boolean;
+  isBackendMode: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, fullName?: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -38,7 +41,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     hydrate();
 
-    if (!isSupabaseConfigured) return;
+    setOnAuthExpired(() => {
+      setSession(null);
+      setIsLoading(false);
+    });
+
+    if (!isSupabaseConfigured || isBackendConfigured) {
+      return () => setOnAuthExpired(null);
+    }
 
     const { data: subscription } = supabase.auth.onAuthStateChange(async (_event, supabaseSession) => {
       if (supabaseSession?.user) {
@@ -56,7 +66,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
     });
 
-    return () => subscription.subscription.unsubscribe();
+    return () => {
+      subscription.subscription.unsubscribe();
+      setOnAuthExpired(null);
+    };
   }, [hydrate]);
 
   const signIn = useCallback(async (email: string, password: string) => {
@@ -87,7 +100,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       isLoading,
       isAuthenticated: Boolean(session),
-      isDemoMode: !isSupabaseConfigured,
+      isDemoMode: !isBackendConfigured && !isSupabaseConfigured,
+      isBackendMode: isBackendConfigured,
       signIn,
       signUp,
       signOut,

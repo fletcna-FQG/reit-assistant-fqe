@@ -17,6 +17,7 @@ export interface Deal {
   imageUrl?: string;
   recommendation?: Recommendation;
   score?: number;
+  analysisId?: string;
   createdAt: string;
 }
 

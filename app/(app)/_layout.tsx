@@ -1,7 +1,8 @@
 import { ResponsiveLayout } from '@/components/layout/ResponsiveLayout';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { DealStateProvider } from '@/hooks/useDealState';
 import { useAuth } from '@/hooks/useAuth';
-import { Redirect, Slot } from 'expo-router';
+import { Redirect, Stack } from 'expo-router';
 
 export default function AppLayout() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -15,8 +16,10 @@ export default function AppLayout() {
   }
 
   return (
-    <ResponsiveLayout>
-      <Slot />
-    </ResponsiveLayout>
+    <DealStateProvider>
+      <ResponsiveLayout>
+        <Stack screenOptions={{ headerShown: false }} />
+      </ResponsiveLayout>
+    </DealStateProvider>
   );
 }

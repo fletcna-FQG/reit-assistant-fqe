@@ -2,7 +2,8 @@ import { SocialLoginButton } from '@/components/auth/SocialLoginButton';
 import { PasswordStrengthBar } from '@/components/ui/PasswordStrengthBar';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { TextField } from '@/components/ui/TextField';
-import { BRAND } from '@/constants/navigation';
+import { BRAND, DASHBOARD_HREF } from '@/constants/navigation';
+import { TEST_USER } from '@/constants/testUser';
 import { AuthError, useAuth } from '@/hooks/useAuth';
 import { isValidEmail, isValidPassword } from '@/utils/validation';
 import * as Haptics from 'expo-haptics';
@@ -20,11 +21,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
-  const { signIn, signUp, signInWithOAuth, isAuthenticated, isLoading, isDemoMode } = useAuth();
+  const { signIn, signUp, signInWithOAuth, isAuthenticated, isLoading, isDemoMode, isBackendMode } =
+    useAuth();
 
   const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
-  const [email, setEmail] = useState('analyst@fletcherquill.com');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState(TEST_USER.email);
+  const [password, setPassword] = useState(__DEV__ ? TEST_USER.password : '');
   const [fullName, setFullName] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
@@ -35,7 +37,7 @@ export default function LoginScreen() {
   const [oauthLoading, setOauthLoading] = useState<'google' | 'apple' | null>(null);
 
   if (!isLoading && isAuthenticated) {
-    return <Redirect href="/(app)/(tabs)" />;
+    return <Redirect href={DASHBOARD_HREF} />;
   }
 
   const validate = (): boolean => {
@@ -45,12 +47,12 @@ export default function LoginScreen() {
     setFormError('');
 
     if (!isValidEmail(email)) {
-      setEmailError('Please enter a valid email address');
+      setEmailError('Please enter a valid email address.');
       setEmailShake((n) => n + 1);
       valid = false;
     }
     if (!isValidPassword(password)) {
-      setPasswordError('Password must be at least 6 characters');
+      setPasswordError('Please enter a password with at least 6 characters.');
       setPasswordShake((n) => n + 1);
       valid = false;
     }
@@ -71,7 +73,7 @@ export default function LoginScreen() {
         await signUp(email, password, fullName || undefined);
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.replace('/(app)/(tabs)');
+      router.replace(DASHBOARD_HREF);
     } catch (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       if (error instanceof AuthError) {
@@ -98,7 +100,7 @@ export default function LoginScreen() {
     try {
       await signInWithOAuth(provider);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.replace('/(app)/(tabs)');
+      router.replace(DASHBOARD_HREF);
     } catch (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setFormError(
@@ -135,7 +137,11 @@ export default function LoginScreen() {
                 ? 'Sign in to manage your REIT portfolio'
                 : `Join ${BRAND.company}`}
             </Text>
-            {isDemoMode ? (
+            {isBackendMode ? (
+              <Text className="mt-2 text-center text-caption text-text-secondary">
+                Backend auth — Fletcher Test account (can receive email)
+              </Text>
+            ) : isDemoMode ? (
               <Text className="mt-2 text-center text-caption text-warning-amber">
                 Demo mode — any valid email + 6+ char password works
               </Text>
@@ -160,10 +166,11 @@ export default function LoginScreen() {
                 setEmail(text);
                 setEmailError('');
               }}
-              placeholder="analyst@fletcherquill.com"
+              placeholder={TEST_USER.email}
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
+              required
               error={emailError}
               shakeTrigger={emailShake}
             />
@@ -178,6 +185,7 @@ export default function LoginScreen() {
               placeholder="Enter your password"
               secureTextEntry
               autoComplete={mode === 'signIn' ? 'password' : 'new-password'}
+              required
               error={passwordError}
               shakeTrigger={passwordShake}
             />

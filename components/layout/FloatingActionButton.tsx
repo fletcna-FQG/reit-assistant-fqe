@@ -1,7 +1,7 @@
 import { colors, layout, shadows } from '@/constants/theme';
 import { useLeftHanded } from '@/hooks/useLeftHanded';
 import { useResponsive } from '@/hooks/useResponsive';
-import * as Haptics from 'expo-haptics';
+import { lightHaptic } from '@/utils/lightHaptic';
 import { Pressable, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -26,8 +26,10 @@ export function FloatingActionButton({ onPress }: FloatingActionButtonProps) {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel="Analyze property"
+      // @ts-expect-error web hover title
+      title="Analyze property"
       onPress={() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        lightHaptic();
         onPress?.();
       }}
       className="absolute items-center justify-center rounded-full bg-emerald"

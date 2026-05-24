@@ -1,5 +1,5 @@
+import { PersistentBottomNav } from '@/components/layout/PersistentBottomNav';
 import { Sidebar } from '@/components/layout/Sidebar';
-import { colors } from '@/constants/theme';
 import { useLeftHanded } from '@/hooks/useLeftHanded';
 import { useResponsive } from '@/hooks/useResponsive';
 import { View } from 'react-native';
@@ -11,7 +11,7 @@ type ResponsiveLayoutProps = {
 /**
  * Responsive shell — 02_Component_Library.md
  * Desktop (≥1024px): Sidebar 280px + main content
- * Mobile (<1024px): Full-width content (bottom tabs handled by Tabs layout)
+ * Mobile (<1024px): Full-width content + persistent bottom navigation
  * Left-handed: flips sidebar to the right
  */
 export function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
@@ -21,7 +21,8 @@ export function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
   if (!isDesktop) {
     return (
       <View className="flex-1 bg-light-gray" style={{ flex: 1 }}>
-        {children}
+        <View className="flex-1">{children}</View>
+        <PersistentBottomNav />
       </View>
     );
   }
