@@ -2,7 +2,7 @@ import { ReitRulesIcon } from '@/components/navigation/ReitRulesIcon';
 import { colors, icons } from '@/constants/theme';
 import Svg, { Circle, Path, Polyline, Rect } from 'react-native-svg';
 
-type NavIconName = 'home' | 'rules' | 'deals' | 'analyze' | 'tasks' | 'profile';
+type NavIconName = 'home' | 'rules' | 'deals' | 'analyze' | 'properties' | 'tasks' | 'portfolio' | 'profile';
 
 type NavIconProps = {
   name: NavIconName;
@@ -51,6 +51,19 @@ export function NavIcon({
           <Path d="M10 7v6M7 10h6" stroke={stroke} strokeWidth={sw} strokeLinecap="round" />
         </Svg>
       );
+    case 'properties':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+          <Path
+            d="M4 20V8l8-5 8 5v12"
+            stroke={stroke}
+            strokeWidth={sw}
+            strokeLinejoin="round"
+          />
+          <Path d="M9 20v-6h6v6" stroke={stroke} strokeWidth={sw} strokeLinejoin="round" />
+          <Path d="M4 10h16" stroke={stroke} strokeWidth={sw} />
+        </Svg>
+      );
     case 'tasks':
       return (
         <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -69,6 +82,14 @@ export function NavIcon({
             strokeLinecap="round"
             strokeLinejoin="round"
           />
+        </Svg>
+      );
+    case 'portfolio':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+          <Rect x="3" y="7" width="18" height="13" rx="1" stroke={stroke} strokeWidth={sw} />
+          <Path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2" stroke={stroke} strokeWidth={sw} />
+          <Path d="M3 12h18" stroke={stroke} strokeWidth={sw} />
         </Svg>
       );
     case 'profile':

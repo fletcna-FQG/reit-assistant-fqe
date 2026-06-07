@@ -1,1 +1,1 @@
-export { default } from '@/app/(app)/(tabs)/tasks';
+export { default } from '../../../src/screens/TasksScreen';

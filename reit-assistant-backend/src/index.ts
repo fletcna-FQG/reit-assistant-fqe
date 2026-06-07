@@ -7,6 +7,13 @@ import authRoutes from './routes/auth';
 import userRoutes from './routes/user';
 import propertiesRoutes from './routes/properties';
 import geocodeRoutes from './routes/geocode';
+import dealsRoutes from './routes/deals';
+import tasksRoutes from './routes/tasks';
+import portfolioRoutes from './routes/portfolio';
+import rulesRoutes from './routes/rules';
+import { analyzeRouter, analysisRouter } from './routes/analyze';
+import attomRoutes from './routes/attom';
+import reitRoutes from './routes/reit';
 
 console.log('🔍 All modules imported successfully');
 
@@ -28,6 +35,14 @@ app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/properties', propertiesRoutes);
 app.use('/api/geocode', geocodeRoutes);
+app.use('/api/deals', dealsRoutes);
+app.use('/api/tasks', tasksRoutes);
+app.use('/api/portfolio', portfolioRoutes);
+app.use('/api/analyze', analyzeRouter);
+app.use('/api/analysis', analysisRouter);
+app.use('/api/rules', rulesRoutes);
+app.use('/api/attom', attomRoutes);
+app.use('/api/reit', reitRoutes);
 
 // Health check
 app.get('/health', (_req, res) => {

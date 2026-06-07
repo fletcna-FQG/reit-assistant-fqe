@@ -1,14 +1,21 @@
 import { Router, Request, Response } from 'express';
-import { supabaseAdmin } from '../config/db';
+import { supabaseAuth, supabaseClient, supabaseDb } from '../config/db';
 import { z } from 'zod';
 
 const router = Router();
 
 // Validation Schemas
+const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001';
+
 const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
   full_name: z.string().min(1),
+  tenant_id: z
+    .string()
+    .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
+    .optional()
+    .default(DEFAULT_TENANT_ID),
   role: z.enum(['admin', 'analyst', 'viewer']).optional().default('analyst'),
 });
 
@@ -17,35 +24,40 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
 // POST /api/auth/register
 router.post('/register', async (req: Request, res: Response) => {
   try {
-    const { email, password, full_name, role } = registerSchema.parse(req.body);
+    const { email, password, full_name, role, tenant_id } = registerSchema.parse(req.body);
 
     // 1. Create Auth User
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    const autoConfirmEmail = process.env.AUTH_AUTO_CONFIRM_EMAIL !== 'false';
+    const { data: authData, error: authError } = await supabaseAuth.auth.admin.createUser({
       email,
       password,
-      email_confirm: true,
-      user_metadata: { full_name, role },
+      email_confirm: autoConfirmEmail,
+      user_metadata: { full_name, role, tenant_id },
     });
 
     if (authError) throw authError;
 
     // 2. Create Profile
-    const { error: profileError } = await supabaseAdmin
+    const { error: profileError } = await supabaseDb
       .from('profiles')
       .insert({
         id: authData.user!.id,
         email,
         full_name,
         role,
-        tenant_id: 'fletcher-quill-estates-inc', // Default tenant for now
+        tenant_id,
       });
 
     if (profileError) {
       // Rollback: delete auth user
-      await supabaseAdmin.auth.admin.deleteUser(authData.user!.id);
+      await supabaseAuth.auth.admin.deleteUser(authData.user!.id);
       throw profileError;
     }
 
@@ -56,7 +68,7 @@ router.post('/register', async (req: Request, res: Response) => {
         email: authData.user!.email,
         full_name,
         role,
-        tenant_id: 'fletcher-quill-estates-inc',
+        tenant_id,
       },
     });
   } catch (error: any) {
@@ -68,13 +80,42 @@ router.post('/register', async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/auth/forgot-password — sends Supabase recovery email via custom SMTP
+router.post('/forgot-password', async (req: Request, res: Response) => {
+  try {
+    const { email } = forgotPasswordSchema.parse(req.body);
+    const redirectTo =
+      process.env.AUTH_RESET_REDIRECT_URL?.trim() || 'http://localhost:8081/login';
+
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(
+      email.trim().toLowerCase(),
+      { redirectTo },
+    );
+
+    if (error) {
+      console.error('Forgot password error:', error.message);
+    }
+
+    // Always return success to avoid email enumeration.
+    res.json({
+      message: 'If an account exists for that email, a password reset link has been sent.',
+    });
+  } catch (error: any) {
+    console.error('Forgot password error:', error);
+    res.status(400).json({
+      error: 'Bad Request',
+      message: error.message ?? 'Could not process password reset request',
+    });
+  }
+});
+
 // POST /api/auth/login
 router.post('/login', async (req: Request, res: Response) => {
   try {
     const { email, password } = loginSchema.parse(req.body);
 
     // 1. Sign in
-    const { data: authData, error: authError } = await supabaseAdmin.auth.signInWithPassword({
+    const { data: authData, error: authError } = await supabaseAuth.auth.signInWithPassword({
       email,
       password,
     });
@@ -87,7 +128,7 @@ router.post('/login', async (req: Request, res: Response) => {
     }
 
     // 2. Get Profile
-    const { data: profile, error: profileError } = await supabaseAdmin
+    const { data: profile, error: profileError } = await supabaseDb
       .from('profiles')
       .select('tenant_id, role, full_name')
       .eq('id', authData.user.id)
@@ -131,7 +172,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
   try {
     const { refresh_token } = refreshSchema.parse(req.body);
 
-    const { data, error } = await supabaseAdmin.auth.refreshSession({ refresh_token });
+    const { data, error } = await supabaseAuth.auth.refreshSession({ refresh_token });
 
     if (error || !data.session?.access_token) {
       return res.status(401).json({
@@ -160,10 +201,10 @@ router.get('/me', async (req: Request, res: Response) => {
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (!token) return res.status(401).json({ error: 'No token' });
 
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
     if (authError || !user) return res.status(401).json({ error: 'Invalid token' });
 
-    const { data: profile } = await supabaseAdmin
+    const { data: profile } = await supabaseDb
       .from('profiles')
       .select('*')
       .eq('id', user.id)

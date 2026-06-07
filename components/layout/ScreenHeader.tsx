@@ -1,11 +1,13 @@
 import { colors, layout } from '@/constants/theme';
 import { useResponsive } from '@/hooks/useResponsive';
-import { router } from 'expo-router';
+import { isPrimaryTabRoute } from '@/utils/navigationRoute';
+import { router, usePathname } from 'expo-router';
 import { Pressable, Text, View, type ViewProps } from 'react-native';
 
 type ScreenHeaderProps = ViewProps & {
   title: string;
   right?: React.ReactNode;
+  /** Defaults to false on primary tab screens (Dashboard, Deals, …). */
   showBack?: boolean;
   onBack?: () => void;
 };
@@ -13,17 +15,20 @@ type ScreenHeaderProps = ViewProps & {
 export function ScreenHeader({
   title,
   right,
-  showBack = true,
+  showBack,
   onBack,
   style,
   ...props
 }: ScreenHeaderProps) {
+  const pathname = usePathname();
   const { isDesktop, isTablet } = useResponsive();
   const height = isDesktop
     ? layout.headerHeight.desktop
     : isTablet
       ? layout.headerHeight.tablet
       : layout.headerHeight.mobile;
+
+  const resolvedShowBack = showBack ?? !isPrimaryTabRoute(pathname);
 
   const handleBack = () => {
     if (onBack) {
@@ -44,7 +49,7 @@ export function ScreenHeader({
       {...props}
     >
       <View className="min-w-0 flex-1 flex-row items-center gap-2">
-        {showBack ? (
+        {resolvedShowBack ? (
           <Pressable
             onPress={handleBack}
             accessibilityRole="button"

@@ -1,15 +1,12 @@
-import { redis } from '../config/redis';
-import { config } from '../config/env';
-import { normalizeSearchQuery } from './nominatimService';
+import {
+  attomCache,
+  buildAddressIdentifier,
+  isAttomConfigured,
+  type AttomAddressParts,
+  type CacheOptions,
+} from './attomCache';
 
-const DEFAULT_BASE_URL = 'https://api.gateway.attomdata.com/propertyapi/v1.0.0';
-const CACHE_TTL_SECONDS = 7 * 24 * 60 * 60;
-
-export type AttomProfileRequest = {
-  address: string;
-  city: string;
-  state: string;
-  zip: string;
+export type AttomProfileRequest = AttomAddressParts & {
   lat: number;
   lon: number;
 };
@@ -56,26 +53,13 @@ export type AttomProfileSnapshot = {
   field_sources: AttomFieldSources;
 };
 
-function attomCacheKey(request: AttomProfileRequest): string {
-  const normalized = normalizeSearchQuery(`${request.address}-${request.city}-${request.state}-${request.zip}`);
-  return `attom:profile:${normalized}`;
-}
+export type AttomFetchOptions = {
+  refresh?: boolean;
+  tenantId?: string;
+  userId?: string;
+};
 
-export function isAttomConfigured(): boolean {
-  const key = config.services.attom.apiKey;
-  return Boolean(key && !key.startsWith('your-'));
-}
-
-function attomHeaders(): Record<string, string> {
-  return {
-    Accept: 'application/json',
-    apikey: config.services.attom.apiKey ?? '',
-  };
-}
-
-function attomBaseUrl(): string {
-  return config.services.attom.baseUrl || DEFAULT_BASE_URL;
-}
+export { isAttomConfigured };
 
 function asNumber(value: unknown): number | undefined {
   if (value == null || value === '') return undefined;
@@ -117,12 +101,6 @@ function parseAttomProfile(profilePayload: unknown, avmPayload: unknown): AttomP
   const lastSale = asNumber(sale.amount ?? sale.saleAmt);
   const avm = avmAmount;
 
-  let capRate: number | undefined;
-  if (avm && propertyTaxes != null) {
-    // Placeholder until rent roll arrives — cap rate left for user/market default.
-    capRate = undefined;
-  }
-
   const snapshot: AttomProfileSnapshot = {
     attom_id: asNumber(record.attomId ?? record.attomid),
     property_type: typeof summary.proptype === 'string' ? summary.proptype : undefined,
@@ -131,7 +109,7 @@ function parseAttomProfile(profilePayload: unknown, avmPayload: unknown): AttomP
     lot_size_sqft: lotSizeSqft,
     price: lastSale ?? avm,
     avm,
-    cap_rate: capRate,
+    cap_rate: undefined,
     vacancy_percent: 5,
     fetched_at: new Date().toISOString(),
     cached: false,
@@ -148,63 +126,42 @@ function parseAttomProfile(profilePayload: unknown, avmPayload: unknown): AttomP
   return snapshot;
 }
 
-async function readAttomCache(key: string): Promise<AttomProfileSnapshot | null> {
-  try {
-    const raw = await redis.get(key);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as AttomProfileSnapshot;
-    return { ...parsed, cached: true };
-  } catch {
-    return null;
-  }
-}
-
-async function writeAttomCache(key: string, snapshot: AttomProfileSnapshot): Promise<void> {
-  try {
-    await redis.setex(key, CACHE_TTL_SECONDS, JSON.stringify(snapshot));
-  } catch (error) {
-    console.warn('ATTOM cache write failed:', error);
-  }
-}
-
-async function attomFetch(path: string, request: AttomProfileRequest): Promise<unknown> {
-  const address1 = encodeURIComponent(request.address);
-  const address2 = encodeURIComponent(`${request.city}, ${request.state} ${request.zip}`);
-  const url = `${attomBaseUrl()}${path}?address1=${address1}&address2=${address2}`;
-
-  const response = await fetch(url, { headers: attomHeaders() });
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`ATTOM request failed (${response.status}): ${body.slice(0, 200)}`);
-  }
-  return response.json();
-}
-
 export async function fetchAttomProfile(
   request: AttomProfileRequest,
-  options?: { refresh?: boolean },
+  options?: AttomFetchOptions,
 ): Promise<AttomProfileSnapshot | null> {
   if (!isAttomConfigured()) {
     return null;
   }
 
-  const cacheKey = attomCacheKey(request);
-  if (!options?.refresh) {
-    const cached = await readAttomCache(cacheKey);
-    if (cached) return cached;
-  }
+  const identifier = buildAddressIdentifier(request);
+  const cacheOptions: CacheOptions = {
+    bypassCache: options?.refresh,
+    tenantId: options?.tenantId,
+    userId: options?.userId,
+  };
 
   try {
-    const [profilePayload, avmPayload] = await Promise.all([
-      attomFetch('/property/expandedprofile', request),
-      attomFetch('/attomavm/detail', request).catch(() => null),
-    ]);
+    const profileResult = await attomCache.getPropertyProfile(identifier, cacheOptions);
 
-    const snapshot = parseAttomProfile(profilePayload, avmPayload);
+    let avmPayload: unknown = null;
+    let avmCached = true;
+    try {
+      const avmResult = await attomCache.getAVMDetail(identifier, cacheOptions);
+      avmPayload = avmResult.data;
+      avmCached = avmResult.source === 'cache';
+    } catch {
+      avmPayload = null;
+    }
+
+    const snapshot = parseAttomProfile(profileResult.data, avmPayload);
     if (!snapshot) return null;
 
-    await writeAttomCache(cacheKey, snapshot);
-    return snapshot;
+    return {
+      ...snapshot,
+      cached: profileResult.source === 'cache' && avmCached,
+      fetched_at: profileResult.cachedAt ?? new Date().toISOString(),
+    };
   } catch (error) {
     console.error('ATTOM fetch error:', error);
     return null;

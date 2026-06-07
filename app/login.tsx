@@ -5,6 +5,7 @@ import { TextField } from '@/components/ui/TextField';
 import { BRAND, DASHBOARD_HREF } from '@/constants/navigation';
 import { TEST_USER } from '@/constants/testUser';
 import { AuthError, useAuth } from '@/hooks/useAuth';
+import { authApi, getApiErrorMessage } from '@/services/api';
 import { isValidEmail, isValidPassword } from '@/utils/validation';
 import * as Haptics from 'expo-haptics';
 import { Redirect, router } from 'expo-router';
@@ -35,6 +36,8 @@ export default function LoginScreen() {
   const [passwordShake, setPasswordShake] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<'google' | 'apple' | null>(null);
+  const [forgotSent, setForgotSent] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
 
   if (!isLoading && isAuthenticated) {
     return <Redirect href={DASHBOARD_HREF} />;
@@ -184,6 +187,7 @@ export default function LoginScreen() {
               }}
               placeholder="Enter your password"
               secureTextEntry
+              showPasswordToggle
               autoComplete={mode === 'signIn' ? 'password' : 'new-password'}
               required
               error={passwordError}
@@ -191,6 +195,41 @@ export default function LoginScreen() {
             />
 
             <PasswordStrengthBar password={password} />
+
+            {mode === 'signIn' && isBackendMode ? (
+              <Pressable
+                className="mb-md self-end"
+                disabled={forgotLoading}
+                onPress={async () => {
+                  if (!isValidEmail(email)) {
+                    setEmailError('Enter your email address first.');
+                    setEmailShake((n) => n + 1);
+                    return;
+                  }
+                  setForgotLoading(true);
+                  setForgotSent(false);
+                  setFormError('');
+                  try {
+                    await authApi.forgotPassword(email.trim().toLowerCase());
+                    setForgotSent(true);
+                  } catch (error) {
+                    setFormError(getApiErrorMessage(error, 'Could not send reset email.'));
+                  } finally {
+                    setForgotLoading(false);
+                  }
+                }}
+              >
+                <Text className="text-body-small font-semibold text-navy">
+                  {forgotLoading ? 'Sending…' : 'Forgot password?'}
+                </Text>
+              </Pressable>
+            ) : null}
+
+            {forgotSent ? (
+              <Text className="mb-md text-body-small text-emerald">
+                If an account exists for that email, a reset link has been sent.
+              </Text>
+            ) : null}
 
             {formError ? (
               <Text className="mb-md text-center text-caption text-alert-red">{formError}</Text>

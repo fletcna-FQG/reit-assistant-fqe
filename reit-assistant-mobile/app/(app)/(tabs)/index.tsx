@@ -1,1 +1,1 @@
-export { default } from '@/app/(app)/(tabs)/index';
+export { default } from '../../../src/screens/DashboardScreen';

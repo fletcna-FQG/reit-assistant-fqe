@@ -3,6 +3,7 @@ import '../global.css';
 import { OfflineBanner } from '@/components/layout/OfflineBanner';
 import { AuthProvider } from '@/hooks/useAuth';
 import { LeftHandedProvider } from '@/hooks/useLeftHanded';
+import { SidebarCollapsedProvider } from '@/hooks/useSidebarCollapsed';
 import { ThemeModeProvider } from '@/hooks/useThemeMode';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
@@ -22,6 +23,7 @@ export default function RootLayout() {
           <AuthProvider>
             <ThemeModeProvider>
               <LeftHandedProvider>
+                <SidebarCollapsedProvider>
                 <View style={{ flex: 1 }}>
                   <OfflineBanner />
                   <StatusBar style="dark" />
@@ -31,6 +33,7 @@ export default function RootLayout() {
                     <Stack.Screen name="(app)" />
                   </Stack>
                 </View>
+                </SidebarCollapsedProvider>
               </LeftHandedProvider>
             </ThemeModeProvider>
           </AuthProvider>

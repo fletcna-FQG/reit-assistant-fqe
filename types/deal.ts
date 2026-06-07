@@ -2,6 +2,7 @@ import type { DealStatus, Recommendation } from './index';
 
 export interface Deal {
   id: string;
+  propertyId?: string;
   address: string;
   city: string;
   state: string;
@@ -19,6 +20,9 @@ export interface Deal {
   score?: number;
   analysisId?: string;
   createdAt: string;
+  /** Short display id when available (e.g. first 8 chars of UUID). */
+  dealNumber?: string;
+  inPortfolio?: boolean;
 }
 
 export interface DealDocument {

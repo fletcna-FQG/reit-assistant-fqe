@@ -1,5 +1,6 @@
 import { DealStateTile } from '@/components/tasks/DealStateTile';
 import { DealsTable } from '@/components/tasks/DealsTable';
+import { AddTaskModal } from '@/components/tasks/AddTaskModal';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import {
   DEFAULT_TASK_DEAL_STATES,
@@ -7,15 +8,16 @@ import {
 } from '@/constants/deals';
 import { colors, layout } from '@/constants/theme';
 import { useDealState } from '@/hooks/useDealState';
-import { getDeals } from '@/services/api';
+import { getDeals, getTasks } from '@/services/api';
 import type { DealStatus } from '@/types/index';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 
 export default function TasksScreen() {
   const { setDealState } = useDealState();
   const [selectedState, setSelectedState] = useState<DealStatus | null>(null);
+  const [addTaskVisible, setAddTaskVisible] = useState(false);
 
   const {
     data: deals = [],
@@ -26,6 +28,13 @@ export default function TasksScreen() {
     queryKey: ['deals', 'tasks-view'],
     queryFn: () => getDeals(),
   });
+
+  const { data: tasks = [] } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: getTasks,
+  });
+
+  const pendingTaskCount = tasks.filter((task) => task.status === 'pending').length;
 
   const activeStates = selectedState ? [selectedState] : DEFAULT_TASK_DEAL_STATES;
 
@@ -63,7 +72,15 @@ export default function TasksScreen() {
 
   return (
     <View className="flex-1 bg-light-gray">
-      <ScreenHeader title="Tasks" />
+      <ScreenHeader
+        title="Tasks"
+        right={
+          <Pressable onPress={() => setAddTaskVisible(true)} accessibilityRole="button">
+            <Text className="text-body-small font-semibold text-navy">+ Add Task</Text>
+          </Pressable>
+        }
+      />
+      <AddTaskModal visible={addTaskVisible} onClose={() => setAddTaskVisible(false)} />
 
       <ScrollView
         className="flex-1"
@@ -92,7 +109,8 @@ export default function TasksScreen() {
         <View className="flex-row items-center justify-between px-md pt-md">
           <Text className="text-h4 text-navy">{activeLabel} Deals</Text>
           <Text className="text-caption text-text-secondary">
-            {filteredDeals.length} deal{filteredDeals.length === 1 ? '' : 's'}
+            {filteredDeals.length} deal{filteredDeals.length === 1 ? '' : 's'} · {pendingTaskCount} open task
+            {pendingTaskCount === 1 ? '' : 's'}
           </Text>
         </View>
 

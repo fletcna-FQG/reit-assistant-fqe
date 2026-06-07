@@ -1,16 +1,7 @@
 import { Text, View } from 'react-native';
 import MapView, { Marker, UrlTile } from 'react-native-maps';
 import { useMemo } from 'react';
-
-type PropertyMapViewProps = {
-  lat: number;
-  lon: number;
-  label?: string;
-  interactive?: boolean;
-  draggablePin?: boolean;
-  onCoordinateChange?: (lat: number, lon: number) => void;
-  onMapPress?: (lat: number, lon: number) => void;
-};
+import type { PropertyMapViewProps } from './PropertyMapView.types';
 
 const OSM_TILE = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 

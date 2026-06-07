@@ -1,4 +1,5 @@
 import { colors } from '@/constants/theme';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
@@ -25,9 +26,11 @@ export function SocialLoginButton({ provider, onPress, loading }: SocialLoginBut
         <ActivityIndicator color={colors.navy} />
       ) : (
         <View className="flex-row items-center gap-3 px-md">
-          <Text className="text-body font-bold text-text-primary">
-            {provider === 'google' ? 'G' : ''}
-          </Text>
+          <Ionicons
+            name={provider === 'google' ? 'logo-google' : 'logo-apple'}
+            size={20}
+            color={provider === 'google' ? '#4285F4' : colors.textPrimary}
+          />
           <Text className="text-body font-semibold text-text-primary">{label}</Text>
         </View>
       )}

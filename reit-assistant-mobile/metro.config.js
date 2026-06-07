@@ -1,5 +1,6 @@
 const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
+const { patchHmrRequestUrl } = require('../metroRewriteRequestUrl');
 
 const projectRoot = __dirname;
 const workspaceRoot = path.resolve(projectRoot, '..');
@@ -14,10 +15,12 @@ config.resolver.nodeModulesPaths = [
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (moduleName.startsWith('@/')) {
-    const target = path.join(workspaceRoot, moduleName.slice(2));
-    return context.resolveRequest(context, target, platform);
+    // Keep a module path (not an absolute filesystem path) so Metro can apply
+    // platform extensions such as PropertyMapView.web.tsx / .native.tsx.
+    const subpath = moduleName.slice(2);
+    return context.resolveRequest(context, path.join('..', subpath), platform);
   }
   return context.resolveRequest(context, moduleName, platform);
 };
 
-module.exports = config;
+module.exports = patchHmrRequestUrl(config);

@@ -22,7 +22,12 @@ const activityIcons = {
 };
 
 export default function DashboardScreen() {
-  const { data: kpis, isLoading: kpisLoading } = useQuery({
+  const {
+    data: kpis,
+    isLoading: kpisLoading,
+    isError: kpisError,
+    refetch: refetchKpis,
+  } = useQuery({
     queryKey: ['portfolio', 'kpis'],
     queryFn: getPortfolioKPIs,
   });
@@ -53,6 +58,18 @@ export default function DashboardScreen() {
 
         {kpisLoading ? (
           <ActivityIndicator color={colors.navy} className="my-lg" />
+        ) : kpisError ? (
+          <View className="mb-lg rounded-md bg-white p-md">
+            <Text className="text-center text-body-small text-text-secondary">
+              Could not load portfolio KPIs. Confirm the backend is running.
+            </Text>
+            <Text
+              className="mt-2 text-center text-body-small font-semibold text-navy"
+              onPress={() => void refetchKpis()}
+            >
+              Retry
+            </Text>
+          </View>
         ) : kpis ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-lg">
             <KPICard

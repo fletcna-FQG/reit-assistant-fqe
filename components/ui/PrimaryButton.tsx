@@ -19,6 +19,7 @@ export function PrimaryButton({
   loading = false,
   disabled,
   onPress,
+  style,
   ...props
 }: PrimaryButtonProps) {
   const isPrimary = variant === 'primary';
@@ -40,10 +41,11 @@ export function PrimaryButton({
             ? colors.navy
             : isSocial
               ? colors.white
-              : 'transparent',
+              : colors.white,
           borderWidth: isPrimary ? 0 : 2,
           borderColor: isSocial ? colors.mediumGray : colors.navy,
         },
+        style as object | undefined,
       ]}
       {...props}
     >

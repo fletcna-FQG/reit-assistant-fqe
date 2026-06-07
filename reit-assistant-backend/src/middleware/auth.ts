@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { supabaseAdmin } from '../config/db';
+import { supabaseAuth, supabaseDb } from '../config/db';
 
 // Extend Express Request type to include user
 declare global {
@@ -26,7 +26,7 @@ export const authenticate = async (
       });
     }
 
-    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+    const { data: { user }, error } = await supabaseAuth.auth.getUser(token);
 
     if (error || !user) {
       return res.status(401).json({
@@ -58,7 +58,7 @@ export const requireRole = (...roles: string[]) => {
         });
       }
 
-      const { data: profile } = await supabaseAdmin
+      const { data: profile } = await supabaseDb
         .from('profiles')
         .select('role')
         .eq('id', req.user.id)

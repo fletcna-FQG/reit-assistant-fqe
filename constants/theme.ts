@@ -55,6 +55,7 @@ export const spacing = {
 
 export const layout = {
   sidebarWidth: 280,
+  sidebarCollapsedWidth: 72,
   bottomNavHeight: 64,
   headerHeight: { mobile: 56, tablet: 60, desktop: 64 },
   contentMaxWidth: 1440,

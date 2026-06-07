@@ -1,1 +1,1 @@
-export { default } from '@/app/(app)/(tabs)/deals';
+export { default } from '../../../src/screens/DealsScreen';

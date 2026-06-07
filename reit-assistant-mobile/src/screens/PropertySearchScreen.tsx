@@ -13,6 +13,8 @@ import {
 } from 'react-native';
 import { SPREADSHEET_SAMPLE } from '../constants/spreadsheetSample';
 import { propertyApi, getApiErrorMessage } from '../services/api';
+import { dealApi } from '../services/dealApi';
+import { toDealPropertyType } from '../utils/dealPropertyType';
 import {
   formatCurrency,
   toPropertyPayload,
@@ -119,9 +121,19 @@ export default function PropertySearchScreen() {
     setIsSaving(true);
     try {
       const result = await propertyApi.createProperty(toPropertyPayload(formData));
+      try {
+        await dealApi.createDeal({
+          property_id: result.property.id,
+          status: 'pipeline',
+          property_type: toDealPropertyType('Multifamily'),
+          entry_mode: 'manual',
+        });
+      } catch {
+        // Property saved; deal creation can be retried from Deals.
+      }
       Alert.alert(
         'Property Saved',
-        `Server calculated results:\n\nNOI: ${formatCurrency(result.property.noi)}\nIndicated Value: ${formatCurrency(result.property.indicated_value)}`,
+        `Server calculated results:\n\nNOI: ${formatCurrency(result.property.noi)}\nIndicated Value: ${formatCurrency(result.property.indicated_value)}\n\nA pipeline deal was created when possible.`,
       );
       setFormData(EMPTY_FORM);
       setSearchExecuted(false);

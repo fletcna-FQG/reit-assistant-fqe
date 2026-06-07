@@ -16,6 +16,7 @@
     "expo-router": "~56.2.6",
     "expo-secure-store": "~56.0.4",
     "expo-status-bar": "~56.0.4",
+    "jsc-safe-url": "^0.2.4",
     "nativewind": "^4.2.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -40,7 +41,8 @@
     "start": "npm run start --prefix ..",
     "android": "npm run android --prefix ..",
     "ios": "npm run ios --prefix ..",
-    "web": "npm run web --prefix .."
+    "web": "npm run web --prefix ..",
+    "web:dev": "npm run web:dev --prefix .."
   },
   "private": true
 }

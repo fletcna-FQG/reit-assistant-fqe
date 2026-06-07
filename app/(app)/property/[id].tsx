@@ -1,6 +1,8 @@
 import { AnalyzeFlowChrome } from '@/components/analyzer/AnalyzeFlowChrome';
 import { AttomMarketDataPanel } from '@/components/property/AttomMarketDataPanel';
 import { PropertyMapView } from '@/components/property/PropertyMapView';
+import { ShareModal } from '@/components/property/ShareModal';
+import { ActionButton } from '@/components/ui/ActionButton';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { IconActionButton } from '@/components/ui/IconActionButton';
 import { FINANCIAL_LABELS, RULES_ENGINE_MESSAGES } from '@/constants/financialLabels';
@@ -8,16 +10,17 @@ import { colors } from '@/constants/theme';
 import {
   analyzeProperty,
   getApiErrorMessage,
+  getDeals,
   propertyApi,
   propertyRecordToAnalysisInput,
 } from '@/services/api';
 import { formatCurrency } from '@/utils/propertyValidation';
 import { getPropertyMeta, savePropertyMeta, type PropertyExtendedMeta } from '@/utils/propertyMetaStorage';
 import type { AttomMarketSnapshot } from '@/types/attom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 
 type RulesStatus = 'idle' | 'running' | 'complete' | 'error';
 
@@ -40,14 +43,22 @@ export default function PropertyDetailScreen() {
   const [attomEnabled, setAttomEnabled] = useState(false);
   const [attomMessage, setAttomMessage] = useState<string | null>(null);
   const [attomLoading, setAttomLoading] = useState(false);
+  const [shareModalVisible, setShareModalVisible] = useState(false);
   const autoRunStarted = useRef(false);
   const marketDataFetched = useRef(false);
+  const queryClient = useQueryClient();
 
   const { data, isLoading, isError, error, isFetching } = useQuery({
     queryKey: ['property', id],
     queryFn: () => propertyApi.getProperty(id!),
     enabled: Boolean(id),
     staleTime: 0,
+  });
+
+  const { data: deals = [] } = useQuery({
+    queryKey: ['deals'],
+    queryFn: () => getDeals(),
+    enabled: Boolean(id),
   });
 
   useEffect(() => {
@@ -60,6 +71,15 @@ export default function PropertyDetailScreen() {
       setMetaLoaded(true);
     });
   }, [id]);
+
+  useEffect(() => {
+    if (!id || analysisId || rulesStatus === 'running') return;
+    const linked = deals.find((deal) => deal.propertyId === id && deal.analysisId);
+    if (linked?.analysisId) {
+      setAnalysisId(linked.analysisId);
+      setRulesStatus('complete');
+    }
+  }, [deals, id, analysisId, rulesStatus]);
 
   const loadMarketData = useCallback(
     async (refresh = false) => {
@@ -110,14 +130,16 @@ export default function PropertyDetailScreen() {
     setRulesError(null);
     try {
       const input = propertyRecordToAnalysisInput(data.property, propertyType, meta ?? undefined);
-      const result = await analyzeProperty(input);
+      const result = await analyzeProperty(input, { propertyId: id });
       setAnalysisId(result.id);
       setRulesStatus('complete');
+      await queryClient.invalidateQueries({ queryKey: ['deals'] });
+      await queryClient.invalidateQueries({ queryKey: ['deal'] });
     } catch (err) {
       setRulesStatus('error');
       setRulesError(getApiErrorMessage(err, 'REIT Rules Engine failed'));
     }
-  }, [data?.property, propertyType, meta]);
+  }, [data?.property, propertyType, meta, id, queryClient]);
 
   useEffect(() => {
     if (
@@ -219,20 +241,23 @@ export default function PropertyDetailScreen() {
               {RULES_ENGINE_MESSAGES.ready}
             </Text>
             <Text className="mb-md text-caption text-text-secondary">
-              Step 5 complete — open Rule Engine Results to review scores, triggered rules, and recommendations.
+              Valuation summary is saved. Review Rule Engine results to finish step 6, then start the deal
+              process from the results page.
             </Text>
-            <IconActionButton
-              icon="🏁"
-              label={RULES_ENGINE_MESSAGES.viewResults}
-              variant="emerald"
-              compact
+            <PrimaryButton
+              title={RULES_ENGINE_MESSAGES.viewResults}
               onPress={() =>
                 router.push({
                   pathname: '/(app)/analysis/[id]',
-                  params: { id: analysisId, propertyType, flowStep: '6' },
+                  params: { id: analysisId, propertyType, propertyId: id, flowStep: '6' },
                 })
               }
             />
+            <Pressable className="mt-3 items-center py-2" onPress={() => void runRulesEngine()}>
+              <Text className="text-caption font-semibold text-navy">
+                Re-run Rules Engine (optional)
+              </Text>
+            </Pressable>
           </View>
         ) : rulesStatus === 'running' ? (
           <View className="mb-md rounded-md bg-white p-md shadow-sm">
@@ -240,16 +265,41 @@ export default function PropertyDetailScreen() {
               {RULES_ENGINE_MESSAGES.eta} The valuation summary above is already saved.
             </Text>
           </View>
-        ) : null}
+        ) : rulesStatus === 'error' ? (
+          <View className="mb-md rounded-md border-2 bg-white p-md" style={{ borderColor: colors.alertRed }}>
+            <Text className="text-body-small font-semibold text-alert-red">Rules Engine could not complete</Text>
+            {rulesError ? (
+              <Text className="mt-1 text-caption text-text-secondary">{rulesError}</Text>
+            ) : null}
+            <View className="mt-md">
+              <PrimaryButton
+                title={RULES_ENGINE_MESSAGES.runAgain}
+                onPress={() => void runRulesEngine()}
+              />
+            </View>
+          </View>
+        ) : (
+          <View className="mb-md">
+            <PrimaryButton
+              title="Run REIT Rules Engine"
+              onPress={() => void runRulesEngine()}
+              loading={rulesStatus === 'running'}
+            />
+          </View>
+        )}
 
-        {!shouldAutoRun || rulesStatus === 'error' ? (
-          <PrimaryButton
-            title={rulesStatus === 'error' ? RULES_ENGINE_MESSAGES.runAgain : 'Run REIT Rules Engine'}
-            onPress={() => void runRulesEngine()}
-            loading={rulesStatus === 'running'}
-          />
-        ) : null}
+        <View className="mb-md">
+          <ActionButton title="Share" variant="outline" onPress={() => setShareModalVisible(true)} />
+        </View>
       </ScrollView>
+
+      {id ? (
+        <ShareModal
+          visible={shareModalVisible}
+          propertyId={id}
+          onClose={() => setShareModalVisible(false)}
+        />
+      ) : null}
     </View>
   );
 }

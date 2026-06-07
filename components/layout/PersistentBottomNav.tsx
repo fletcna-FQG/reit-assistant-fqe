@@ -9,13 +9,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function isNavActive(pathname: string, routeName: string): boolean {
   const segment = pathname.split('/').filter(Boolean).pop() ?? 'index';
-  const inAnalyzeFlow = pathname.includes('/property/') || pathname.includes('/analysis/');
+  const inAnalysisFlow = pathname.includes('/analysis/');
+  const inPropertyFlow = pathname.includes('/property/');
 
   if (routeName === 'index') {
     return segment === 'index' || pathname.endsWith('/(tabs)') || pathname === '/';
   }
   if (routeName === 'analyze') {
-    return segment === 'analyze' || inAnalyzeFlow;
+    return segment === 'analyze' || inAnalysisFlow;
+  }
+  if (routeName === 'properties') {
+    return segment === 'properties' || inPropertyFlow;
   }
   return segment === routeName;
 }

@@ -9,6 +9,7 @@ import {
 import { colors } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { useLeftHanded } from '@/hooks/useLeftHanded';
+import { useSidebarCollapsed } from '@/hooks/useSidebarCollapsed';
 import { useThemeMode } from '@/hooks/useThemeMode';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
@@ -21,6 +22,7 @@ const ENABLED_KEY = 'reit_enabled_integrations';
 export default function SettingsScreen() {
   const { session, signOut, isDemoMode } = useAuth();
   const { isLeftHanded, setLeftHanded } = useLeftHanded();
+  const { isCollapsed, setCollapsed } = useSidebarCollapsed();
   const { isDark, setDarkMode } = useThemeMode();
   const [enabledIds, setEnabledIds] = useState<string[]>([]);
 
@@ -80,6 +82,15 @@ export default function SettingsScreen() {
             subtitle="Use dark design tokens"
             value={isDark}
             onValueChange={setDarkMode}
+          />
+          <SettingRow
+            title="Compact sidebar"
+            subtitle="Show navigation icons only on desktop for more workspace."
+            value={isCollapsed}
+            onValueChange={(v) => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setCollapsed(v);
+            }}
           />
           <SettingRow
             title="Navigation bar on the right"

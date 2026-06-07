@@ -1,14 +1,5 @@
 import { Text, View } from 'react-native';
-
-type PropertyMapViewProps = {
-  lat: number;
-  lon: number;
-  label?: string;
-  interactive?: boolean;
-  draggablePin?: boolean;
-  onCoordinateChange?: (lat: number, lon: number) => void;
-  onMapPress?: (lat: number, lon: number) => void;
-};
+import type { PropertyMapViewProps } from './PropertyMapView.types';
 
 function WebMapEmbed({ lat, lon }: { lat: number; lon: number }) {
   const osmEmbedUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lon - 0.01}%2C${lat - 0.01}%2C${lon + 0.01}%2C${lat + 0.01}&layer=mapnik&marker=${lat}%2C${lon}`;

@@ -6,7 +6,7 @@ import { TextField } from '@/components/ui/TextField';
 import { FINANCIAL_LABELS } from '@/constants/financialLabels';
 import { type PropertyEntryMode, type PropertyType } from '@/constants/propertyTypes';
 import { colors, layout } from '@/constants/theme';
-import { getApiErrorMessage, propertyApi } from '@/services/api';
+import { createDealForProperty, getApiErrorMessage, propertyApi } from '@/services/api';
 import {
   emptyPropertyForm,
   formToExtendedMeta,
@@ -196,8 +196,21 @@ export default function AnalyzeScreen() {
         });
         await savePropertyMeta(result.property.id, meta);
 
+        const deal = await createDealForProperty({
+          property_id: result.property.id,
+          property: result.property,
+          property_type: propertyType,
+          entry_mode: entryMode,
+          status: 'pipeline',
+        });
+
         queryClient.setQueryData(['property', result.property.id], { property: result.property });
         await queryClient.invalidateQueries({ queryKey: ['properties'] });
+        await queryClient.invalidateQueries({ queryKey: ['deals'] });
+        await queryClient.invalidateQueries({ queryKey: ['portfolio', 'kpis'] });
+        if (deal) {
+          await queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        }
 
         router.push({
           pathname: '/(app)/property/[id]',

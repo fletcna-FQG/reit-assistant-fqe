@@ -1,9 +1,16 @@
 import { API_URL } from '@/config/env';
 import type { AnalysisInput, AnalysisResult } from '@/types/analysis';
 import type { ActivityItem, CapRateDistribution, PortfolioKPIs } from '@/types/api';
+import type {
+  AttomMonthlySpend,
+  PortfolioHoldingsResponse,
+  PortfolioImportRow,
+} from '@/types/portfolio';
 import type { DealStatus } from '@/types/index';
 import type { Deal, DealDocument, DealDetail } from '@/types/deal';
 import type { InvestmentRule } from '@/types/rule';
+import { toDealPropertyType } from '@/utils/dealPropertyType';
+import { parseShareRecipients } from '@/utils/shareRecipients';
 import type { Task } from '@/types/task';
 import type { GeocodeDetailsResponse, GeocodeReverseResponse, GeocodeSearchResponse } from '@/types/geocode';
 import type { AttomMarketDataResponse, AttomMarketSnapshot } from '@/types/attom';
@@ -22,7 +29,6 @@ import {
   addDealDocumentToStore,
   updateDealStatusInStore,
 } from './mockData';
-import { getDealStatus, loadDealStatuses, saveDealStatus } from '@/utils/dealStatusStorage';
 
 let authToken: string | null = null;
 
@@ -98,19 +104,41 @@ api.interceptors.response.use(
   },
 );
 
-/** Dashboard/deals/tasks still use mock data until live portfolio endpoints ship. */
+/** Live API for dashboard/deals/tasks when EXPO_PUBLIC_USE_LIVE_API=true. */
 const useMock = () => process.env.EXPO_PUBLIC_USE_LIVE_API !== 'true';
 
 const delay = (ms = 400) => new Promise((r) => setTimeout(r, ms));
 
 export function getApiErrorMessage(error: unknown, fallback = 'Something went wrong'): string {
   if (isAxiosError(error)) {
-    return error.response?.data?.message ?? error.message ?? fallback;
+    const data = error.response?.data as { message?: string; error?: string } | undefined;
+    return data?.message ?? data?.error ?? error.message ?? fallback;
   }
   if (error instanceof Error) {
     return error.message;
   }
   return fallback;
+}
+
+function buildShareRecipientPayload(recipients?: string | string[]): {
+  recipient?: string;
+  recipients?: string[];
+} {
+  if (Array.isArray(recipients)) {
+    const list = recipients.map((value) => value.trim()).filter(Boolean);
+    if (!list.length) return {};
+    return { recipients: list, recipient: list.join(', ') };
+  }
+
+  if (typeof recipients === 'string' && recipients.trim()) {
+    const list = parseShareRecipients(recipients);
+    if (list.length) {
+      return { recipients: list, recipient: list.join(', ') };
+    }
+    return { recipient: recipients.trim() };
+  }
+
+  return {};
 }
 
 export const authApi = {
@@ -142,6 +170,10 @@ export const authApi = {
       role: 'analyst',
     });
     return response.data;
+  },
+  forgotPassword: async (email: string) => {
+    const response = await api.post('/api/auth/forgot-password', { email });
+    return response.data as { message: string };
   },
   getProfile: async () => {
     const response = await api.get('/api/user/me');
@@ -289,6 +321,73 @@ export async function getCapRateDistribution(): Promise<CapRateDistribution[]> {
   return data;
 }
 
+export async function getPortfolioHoldings(): Promise<PortfolioHoldingsResponse> {
+  if (useMock()) {
+    await delay(200);
+    const approved = MOCK_DEALS.filter((d) => d.status === 'approved' || d.status === 'closed');
+    const holdings = approved.map((d) => ({
+      dealId: d.id,
+      propertyId: d.propertyId ?? null,
+      address: d.address,
+      city: d.city,
+      state: d.state,
+      zip: d.zip,
+      value: d.price,
+      noi: d.price * (d.capRate / 100) * 0.65,
+      capRate: d.capRate,
+      status: d.status,
+      dealState: d.status === 'approved' ? 'Under Contract' : 'Closed',
+      score: d.score,
+      recommendation: d.recommendation,
+      inPortfolio: true,
+    }));
+    const totalAum = holdings.reduce((sum, h) => sum + h.value, 0);
+    const totalNoi = holdings.reduce((sum, h) => sum + h.noi, 0);
+    const avgCapRate =
+      holdings.length > 0
+        ? holdings.reduce((sum, h) => sum + h.capRate, 0) / holdings.length
+        : 0;
+    return { holdings, summary: { count: holdings.length, totalAum, totalNoi, avgCapRate } };
+  }
+  const { data } = await api.get<PortfolioHoldingsResponse>('/api/portfolio/holdings');
+  return data;
+}
+
+export async function addDealToPortfolio(dealId: string): Promise<void> {
+  if (useMock()) {
+    await delay(200);
+    return;
+  }
+  await api.post(`/api/portfolio/holdings/${dealId}`);
+}
+
+export async function removeDealFromPortfolio(dealId: string): Promise<void> {
+  if (useMock()) {
+    await delay(200);
+    return;
+  }
+  await api.delete(`/api/portfolio/holdings/${dealId}`);
+}
+
+export async function importPortfolioRows(
+  rows: PortfolioImportRow[],
+): Promise<{ message: string; created: { dealId: string; propertyId: string; address: string }[] }> {
+  if (useMock()) {
+    await delay(400);
+    return { message: `Imported ${rows.length} holdings (demo)`, created: [] };
+  }
+  const { data } = await api.post<{ message: string; created: { dealId: string; propertyId: string; address: string }[] }>(
+    '/api/portfolio/import',
+    { rows },
+  );
+  return data;
+}
+
+export async function getAttomMonthlySpend(): Promise<AttomMonthlySpend> {
+  const { data } = await api.get<AttomMonthlySpend>('/api/attom/monthly-spend');
+  return data;
+}
+
 function filterDealsList(deals: Deal[], search?: string, filter?: string): Deal[] {
   let result = deals;
   if (search) {
@@ -306,60 +405,13 @@ function filterDealsList(deals: Deal[], search?: string, filter?: string): Deal[
   return result;
 }
 
-function propertyToDeal(property: PropertyRecord, status: DealStatus): Deal {
-  return {
-    id: property.id,
-    address: property.address,
-    city: property.city,
-    state: property.state,
-    zip: property.zip,
-    price: property.indicated_value ?? 0,
-    capRate: property.cap_rate ?? 0,
-    status,
-    propertyType: 'Property',
-    createdAt: property.created_at?.slice(0, 10) ?? '',
-  };
-}
-
-function propertyToDealDetail(property: PropertyRecord, status: DealStatus): DealDetail {
-  const deal = propertyToDeal(property, status);
-  return {
-    ...deal,
-    purchasePrice: deal.price,
-    estimatedValue: deal.price,
-    noi: property.noi ?? 0,
-    occupancy: 0,
-    loanAmount: 0,
-    interestRate: 0,
-    loanTerm: 0,
-    dscr: 0,
-    documents: [],
-    financials: [],
-    timeline: [],
-  };
-}
-
-async function getDealsFromProperties(search?: string, filter?: string): Promise<Deal[]> {
-  const { properties } = await propertyApi.getProperties();
-  const statusMap = await loadDealStatuses(properties.map((p) => p.id));
-  const deals = properties.map((p) => propertyToDeal(p, statusMap[p.id] ?? 'pipeline'));
-  return filterDealsList(deals, search, filter);
-}
-
 export async function getDeals(search?: string, filter?: string): Promise<Deal[]> {
   if (useMock()) {
     await delay();
     return filterDealsList([...MOCK_DEALS], search, filter);
   }
-  try {
-    const { data } = await api.get<Deal[]>('/api/deals', { params: { search, filter } });
-    if (Array.isArray(data)) {
-      return filterDealsList(data, search, filter);
-    }
-  } catch {
-    // Backend has no /api/deals yet — list saved properties as deals.
-  }
-  return getDealsFromProperties(search, filter);
+  const { data } = await api.get<Deal[]>('/api/deals', { params: { search, filter } });
+  return filterDealsList(Array.isArray(data) ? data : [], search, filter);
 }
 
 export async function getDeal(id: string): Promise<DealDetail> {
@@ -367,18 +419,91 @@ export async function getDeal(id: string): Promise<DealDetail> {
     await delay();
     return getDealDetail(id);
   }
-  try {
-    const { data } = await api.get<DealDetail>(`/api/deals/${id}`);
-    return data;
-  } catch {
-    const { property } = await propertyApi.getProperty(id);
-    const status = await getDealStatus(id);
-    return propertyToDealDetail(property, status);
-  }
+  const { data } = await api.get<DealDetail>(`/api/deals/${id}`);
+  return data;
 }
 
 export function findDealIdByAnalysisId(analysisId: string): string | null {
   return MOCK_DEALS.find((d) => d.analysisId === analysisId)?.id ?? null;
+}
+
+export async function findDealIdByAnalysisIdLive(analysisId: string): Promise<string | null> {
+  const mockHit = findDealIdByAnalysisId(analysisId);
+  if (mockHit) return mockHit;
+  if (useMock()) return null;
+  try {
+    const deals = await getDeals();
+    return deals.find((d) => d.analysisId === analysisId)?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function findDealIdByPropertyIdLive(propertyId: string): Promise<string | null> {
+  if (useMock()) {
+    return MOCK_DEALS.find((d) => d.propertyId === propertyId)?.id ?? null;
+  }
+  try {
+    const deals = await getDeals();
+    return deals.find((d) => d.propertyId === propertyId)?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Ensures a pipeline deal exists for this property/analysis (creates one if missing). */
+export async function ensureDealForAnalysis(params: {
+  analysis: AnalysisResult;
+  propertyId?: string;
+  propertyType?: string;
+  dealId?: string | null;
+}): Promise<Deal> {
+  let resolvedId =
+    params.dealId ??
+    (await findDealIdByAnalysisIdLive(params.analysis.id)) ??
+    (params.propertyId ? await findDealIdByPropertyIdLive(params.propertyId) : null);
+
+  if (resolvedId) {
+    if (useMock()) {
+      const mock = MOCK_DEALS.find((d) => d.id === resolvedId);
+      if (mock) {
+        mock.analysisId = params.analysis.id;
+        mock.recommendation = params.analysis.recommendation;
+        mock.score = params.analysis.score;
+        return mock;
+      }
+    }
+    return getDeal(resolvedId);
+  }
+
+  if (!params.propertyId) {
+    throw new Error('No property is linked to this analysis. Save the property from Analyze first.');
+  }
+
+  const { property } = await propertyApi.getProperty(params.propertyId);
+  const created = await createDealForProperty({
+    property_id: params.propertyId,
+    property,
+    property_type: params.propertyType ?? params.analysis.input.propertyType,
+    entry_mode: 'rules_engine',
+    status: 'pipeline',
+  });
+
+  if (!created) {
+    throw new Error('Could not create a deal for this property.');
+  }
+
+  if (useMock()) {
+    created.analysisId = params.analysis.id;
+    created.recommendation = params.analysis.recommendation;
+    created.score = params.analysis.score;
+    const idx = MOCK_DEALS.findIndex((d) => d.id === created.id);
+    if (idx >= 0) {
+      MOCK_DEALS[idx] = { ...MOCK_DEALS[idx], ...created };
+    }
+  }
+
+  return created;
 }
 
 export async function updateDealStatus(id: string, status: DealStatus): Promise<DealDetail> {
@@ -387,14 +512,8 @@ export async function updateDealStatus(id: string, status: DealStatus): Promise<
     updateDealStatusInStore(id, status);
     return getDealDetail(id);
   }
-  try {
-    const { data } = await api.patch<DealDetail>(`/api/deals/${id}`, { status });
-    return data;
-  } catch {
-    await saveDealStatus(id, status);
-    const { property } = await propertyApi.getProperty(id);
-    return propertyToDealDetail(property, status);
-  }
+  const { data } = await api.patch<DealDetail>(`/api/deals/${id}`, { status });
+  return data;
 }
 
 export async function addDealDocument(
@@ -412,18 +531,42 @@ export async function addDealDocument(
     addDealDocumentToStore(dealId, doc);
     return getDealDetail(dealId);
   }
-  const { data } = await api.post<DealDetail>(`/api/deals/${dealId}/documents`, doc);
-  return data;
+  try {
+    const { data } = await api.post<DealDetail>(`/api/deals/${dealId}/documents`, doc);
+    return data;
+  } catch (error) {
+    if (isAxiosError(error) && error.response?.status === 404) {
+      addDealDocumentToStore(dealId, doc);
+      return getDealDetail(dealId);
+    }
+    throw error;
+  }
 }
 
-export async function analyzeProperty(input: AnalysisInput): Promise<AnalysisResult> {
+export async function analyzeProperty(
+  input: AnalysisInput,
+  options?: { propertyId?: string },
+): Promise<AnalysisResult> {
   if (useMock()) {
     await delay(1500);
     const result = evaluateProperty(input);
     return saveAnalysis(result);
   }
-  const { data } = await api.post<AnalysisResult>('/api/analyze', input);
-  return data;
+  try {
+    const { data } = await api.post<AnalysisResult>('/api/analyze', {
+      ...input,
+      property_id: options?.propertyId,
+    });
+    saveAnalysis(data);
+    return data;
+  } catch (error) {
+    if (isAxiosError(error) && error.response?.status === 404) {
+      await delay(800);
+      const result = evaluateProperty(input);
+      return saveAnalysis(result);
+    }
+    throw error;
+  }
 }
 
 export async function getAnalysisById(id: string): Promise<AnalysisResult | null> {
@@ -431,8 +574,18 @@ export async function getAnalysisById(id: string): Promise<AnalysisResult | null
     await delay(300);
     return getAnalysis(id);
   }
-  const { data } = await api.get<AnalysisResult>(`/api/analysis/${id}`);
-  return data;
+  const cached = getAnalysis(id);
+  if (cached) return cached;
+  try {
+    const { data } = await api.get<AnalysisResult>(`/api/analysis/${id}`);
+    saveAnalysis(data);
+    return data;
+  } catch (error) {
+    if (isAxiosError(error) && error.response?.status === 404) {
+      return getAnalysis(id);
+    }
+    throw error;
+  }
 }
 
 export async function getTasks(): Promise<Task[]> {
@@ -462,8 +615,59 @@ export async function createTask(task: Omit<Task, 'id'>): Promise<Task> {
     MOCK_TASKS.push(newTask);
     return newTask;
   }
-  const { data } = await api.post<Task>('/api/tasks', task);
+  const { data } = await api.post<Task>('/api/tasks', {
+    deal_id: task.dealId,
+    title: task.title,
+    status: task.status,
+    priority: task.priority,
+    assignee_name: task.assignee,
+    assignee_initials: task.assigneeInitials,
+    due_date: task.dueDate,
+  });
   return data;
+}
+
+export async function createDealForProperty(params: {
+  property_id: string;
+  property?: PropertyRecord;
+  property_type?: string;
+  entry_mode?: string;
+  status?: DealStatus;
+}): Promise<Deal | null> {
+  const status = params.status ?? 'pipeline';
+
+  if (useMock()) {
+    await delay(200);
+    const property =
+      params.property ?? (await propertyApi.getProperty(params.property_id)).property;
+    const newDeal: Deal = {
+      id: `deal_${Date.now()}`,
+      address: property.address,
+      city: property.city,
+      state: property.state,
+      zip: property.zip,
+      price: property.indicated_value ?? 0,
+      capRate: property.cap_rate ?? 0,
+      status,
+      propertyType: params.property_type ?? 'Property',
+      createdAt: property.created_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
+    };
+    MOCK_DEALS.unshift(newDeal);
+    return newDeal;
+  }
+
+  try {
+    const { data } = await api.post<Deal>('/api/deals', {
+      property_id: params.property_id,
+      status,
+      property_type: toDealPropertyType(params.property_type),
+      entry_mode: params.entry_mode ?? 'manual',
+    });
+    return data;
+  } catch (error) {
+    console.warn('createDealForProperty failed:', getApiErrorMessage(error));
+    return null;
+  }
 }
 
 export async function getRules(): Promise<InvestmentRule[]> {
@@ -471,8 +675,17 @@ export async function getRules(): Promise<InvestmentRule[]> {
     await delay();
     return [...MOCK_RULES];
   }
-  const { data } = await api.get<InvestmentRule[]>('/api/rules');
-  return data;
+  try {
+    const { data } = await api.get<InvestmentRule[]>('/api/rules');
+    if (Array.isArray(data) && data.length > 0) {
+      return data;
+    }
+  } catch (error) {
+    if (!isAxiosError(error) || error.response?.status !== 404) {
+      console.warn('getRules live API failed, using out-of-box defaults:', getApiErrorMessage(error));
+    }
+  }
+  return [...MOCK_RULES];
 }
 
 export async function createRule(rule: Omit<InvestmentRule, 'id'>): Promise<InvestmentRule> {
@@ -585,24 +798,53 @@ export async function addAnalysisToPortfolio(
   return data;
 }
 
-export async function requestAnalysisInfo(analysis: AnalysisResult): Promise<Task> {
+export async function createAnalysisFollowUp(
+  analysis: AnalysisResult,
+  options?: { dealId?: string | null; propertyId?: string; propertyType?: string },
+): Promise<{ task: Task; deal: Deal }> {
   const location = parseAddressFromInput(analysis.input.address);
-  const newTask: Omit<Task, 'id'> = {
-    title: `Request info: ${location.address}`,
-    assignee: 'Investment Analyst',
-    assigneeInitials: 'IA',
+  const deal = await ensureDealForAnalysis({
+    analysis,
+    propertyId: options?.propertyId,
+    propertyType: options?.propertyType,
+    dealId: options?.dealId,
+  });
+
+  const task = await createTask({
+    title: `Follow up: ${location.address}`,
+    assignee: 'Unassigned',
+    assigneeInitials: 'UA',
     dueDate: new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10),
     priority: 'medium',
     status: 'pending',
-  };
+    dealId: deal.id,
+  });
 
-  if (useMock()) {
-    await delay(300);
-    const task: Task = { ...newTask, id: `t${Date.now()}` };
-    MOCK_TASKS.push(task);
-    return task;
-  }
-  const { data } = await api.post<Task>('/api/tasks', newTask);
+  return { task, deal };
+}
+
+/** @deprecated Use createAnalysisFollowUp */
+export const requestAnalysisInfo = createAnalysisFollowUp;
+
+export type SharePropertyResponse = {
+  success: boolean;
+  url?: string;
+  messageId?: string;
+  error?: string;
+  sentCount?: number;
+  failedRecipients?: string[];
+};
+
+export async function shareProperty(
+  propertyId: string,
+  type: 'link' | 'sms' | 'email',
+  recipients?: string | string[],
+): Promise<SharePropertyResponse> {
+  const { data } = await api.post<SharePropertyResponse>('/api/reit/share', {
+    propertyId,
+    type,
+    ...buildShareRecipientPayload(recipients),
+  });
   return data;
 }
 

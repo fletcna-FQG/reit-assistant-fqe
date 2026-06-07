@@ -11,7 +11,7 @@ export default function DealsScreen() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<string>('All');
 
-  const { data: deals = [], isLoading } = useQuery({
+  const { data: deals = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['deals', search, filter],
     queryFn: () => getDeals(search, filter),
   });
@@ -50,6 +50,18 @@ export default function DealsScreen() {
       </View>
       {isLoading ? (
         <ActivityIndicator color={colors.navy} className="mt-xl" />
+      ) : isError ? (
+        <View className="mx-md mt-md rounded-md bg-white p-lg">
+          <Text className="text-center text-body-small text-text-secondary">
+            Could not load deals. Check that the backend is running and the migration has been applied.
+          </Text>
+          <Text
+            className="mt-2 text-center text-body-small font-semibold text-navy"
+            onPress={() => void refetch()}
+          >
+            Retry
+          </Text>
+        </View>
       ) : (
         <FlatList
           data={deals}

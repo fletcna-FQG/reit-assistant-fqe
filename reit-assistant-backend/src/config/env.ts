@@ -11,8 +11,13 @@ const envSchema = z.object({
   PORT: z.string().default('3000'),
   NODE_ENV: z.enum(['development', 'production']).default('development'),
   BREVO_API_KEY: z.string().optional(),
+  BREVO_SENDER_EMAIL: z.string().email().optional(),
+  BREVO_SENDER_NAME: z.string().optional(),
   AA_API_KEY: z.string().optional(),
   AA_COMMUNITY_ID: z.string().optional(),
+  SMS_PROVIDER: z.string().optional(),
+  GHL_API_KEY: z.string().optional(),
+  GHL_LOCATION_ID: z.string().optional(),
   ATTOM_API_KEY: z.string().optional(),
   ATTOM_BASE_URL: z.string().optional(),
 });
@@ -38,10 +43,21 @@ export const config = {
     env: env.data.NODE_ENV,
   },
   services: {
-    brevo: env.data.BREVO_API_KEY,
+    brevo: {
+      apiKey: env.data.BREVO_API_KEY,
+      senderEmail: env.data.BREVO_SENDER_EMAIL,
+      senderName: env.data.BREVO_SENDER_NAME ?? 'REIT Assistant',
+    },
     actionAccel: {
       apiKey: env.data.AA_API_KEY,
       communityId: env.data.AA_COMMUNITY_ID,
+    },
+    sms: {
+      provider: env.data.SMS_PROVIDER ?? 'ghl',
+      ghl: {
+        apiKey: env.data.GHL_API_KEY,
+        locationId: env.data.GHL_LOCATION_ID,
+      },
     },
     attom: {
       apiKey: env.data.ATTOM_API_KEY,
