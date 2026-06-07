@@ -434,6 +434,10 @@ router.post('/share', async (req: Request, res: Response) => {
     const recipientSummary = shareRecipients.join(', ');
 
     if (!sentCount) {
+      const deliveryError =
+        smsResults.find(({ result }) => result.error)?.result.error ??
+        'SMS delivery failed';
+
       await logShareAudit(tenantId, userId, 'SHARE_SMS', {
         property_id: propertyId,
         recipient: recipientSummary,
@@ -442,12 +446,14 @@ router.post('/share', async (req: Request, res: Response) => {
         url: reportUrl,
         status: 'failed',
         failed_recipients: failedRecipients,
+        delivery_error: deliveryError,
       });
 
       return res.status(502).json({
         success: false,
         url: reportUrl,
         error: 'SMS delivery failed',
+        message: deliveryError,
         failedRecipients,
       });
     }

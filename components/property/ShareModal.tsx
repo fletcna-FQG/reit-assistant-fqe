@@ -195,7 +195,7 @@ export function ShareModal({ visible, propertyId, onClose }: ShareModalProps) {
           <ShareOptionCard
             emoji="📋"
             title="Copy Link"
-            description="Generate a report link and copy it to your clipboard."
+            description="Generate a report link and copy it to your clipboard (may take up to a minute)."
             loading={copyingLink}
             onPress={() => void handleCopyLink()}
           />
@@ -241,7 +241,7 @@ export function ShareModal({ visible, propertyId, onClose }: ShareModalProps) {
             style={{ minHeight: 96, height: 96, paddingTop: 12 }}
           />
           <PrimaryButton
-            title={sendingSms ? 'Sending...' : 'Send SMS'}
+            title={sendingSms ? 'Generating report & sending…' : 'Send SMS'}
             loading={sendingSms}
             onPress={() => void handleSendSms()}
           />
@@ -270,7 +270,7 @@ export function ShareModal({ visible, propertyId, onClose }: ShareModalProps) {
             style={{ minHeight: 96, height: 96, paddingTop: 12 }}
           />
           <PrimaryButton
-            title={sendingEmail ? 'Sending...' : 'Send Email'}
+            title={sendingEmail ? 'Generating report & sending…' : 'Send Email'}
             loading={sendingEmail}
             onPress={() => void handleSendEmail()}
           />

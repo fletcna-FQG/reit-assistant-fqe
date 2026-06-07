@@ -1,7 +1,8 @@
 # Brevo SMTP setup for REIT Assistant
 
 Supabase Auth sends **signup confirmation**, **password reset**, and **invite** emails.  
-Share report emails use the **Brevo REST API** separately (`src/services/emailAdapter.ts`).
+Share report emails use the **Brevo REST API** separately (`src/services/emailAdapter.ts`).  
+Share report **SMS** uses the same REST key — see [BREVO_SMS_SETUP.md](./BREVO_SMS_SETUP.md).
 
 ## Two Brevo credentials (do not mix them)
 

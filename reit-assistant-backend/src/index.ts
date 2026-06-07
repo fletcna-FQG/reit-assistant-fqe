@@ -14,6 +14,7 @@ import rulesRoutes from './routes/rules';
 import { analyzeRouter, analysisRouter } from './routes/analyze';
 import attomRoutes from './routes/attom';
 import reitRoutes from './routes/reit';
+import smsRoutes from './routes/sms';
 
 console.log('🔍 All modules imported successfully');
 
@@ -43,6 +44,7 @@ app.use('/api/analysis', analysisRouter);
 app.use('/api/rules', rulesRoutes);
 app.use('/api/attom', attomRoutes);
 app.use('/api/reit', reitRoutes);
+app.use('/api/sms', smsRoutes);
 
 // Health check
 app.get('/health', (_req, res) => {

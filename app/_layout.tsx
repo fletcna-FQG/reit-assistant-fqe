@@ -30,6 +30,11 @@ export default function RootLayout() {
                   <Stack screenOptions={{ headerShown: false }}>
                     <Stack.Screen name="index" />
                     <Stack.Screen name="login" />
+                    <Stack.Screen name="sms-updates" />
+                    <Stack.Screen name="join-sms" />
+                    <Stack.Screen name="privacy" />
+                    <Stack.Screen name="terms" />
+                    <Stack.Screen name="sms-policy" />
                     <Stack.Screen name="(app)" />
                   </Stack>
                 </View>

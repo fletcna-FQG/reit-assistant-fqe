@@ -1,4 +1,3 @@
-import { API_URL } from '@/config/env';
 import type { AnalysisInput, AnalysisResult } from '@/types/analysis';
 import type { ActivityItem, CapRateDistribution, PortfolioKPIs } from '@/types/api';
 import type {
@@ -51,10 +50,15 @@ function notifyAuthExpired() {
 }
 
 export const api = axios.create({
-  baseURL: API_URL,
+  baseURL:
+    process.env.EXPO_PUBLIC_API_URL ||
+    'https://p01--reit-assistant-v2--99vpsnwm46h4.code.run',
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 });
+
+/** Share generates a PDF on the server (Puppeteer + upload) before email/SMS delivery. */
+const SHARE_REQUEST_TIMEOUT_MS = 120_000;
 
 api.interceptors.request.use(async (config) => {
   if (authToken) {
@@ -111,6 +115,9 @@ const delay = (ms = 400) => new Promise((r) => setTimeout(r, ms));
 
 export function getApiErrorMessage(error: unknown, fallback = 'Something went wrong'): string {
   if (isAxiosError(error)) {
+    if (error.code === 'ECONNABORTED' || /timeout exceeded/i.test(error.message)) {
+      return 'Report generation is taking longer than expected. Please wait a moment and try again.';
+    }
     const data = error.response?.data as { message?: string; error?: string } | undefined;
     return data?.message ?? data?.error ?? error.message ?? fallback;
   }
@@ -840,10 +847,28 @@ export async function shareProperty(
   type: 'link' | 'sms' | 'email',
   recipients?: string | string[],
 ): Promise<SharePropertyResponse> {
-  const { data } = await api.post<SharePropertyResponse>('/api/reit/share', {
-    propertyId,
-    type,
-    ...buildShareRecipientPayload(recipients),
+  const { data } = await api.post<SharePropertyResponse>(
+    '/api/reit/share',
+    {
+      propertyId,
+      type,
+      ...buildShareRecipientPayload(recipients),
+    },
+    { timeout: SHARE_REQUEST_TIMEOUT_MS },
+  );
+  return data;
+}
+
+export async function subscribeSmsUpdates(payload: {
+  phone: string;
+  email?: string;
+  source?: 'website' | 'qr' | 'keyword';
+}): Promise<{ success: boolean; message?: string }> {
+  const { data } = await api.post<{ success: boolean; message?: string }>('/api/sms/subscribe', {
+    phone: payload.phone,
+    email: payload.email,
+    consent: true,
+    source: payload.source ?? 'website',
   });
   return data;
 }

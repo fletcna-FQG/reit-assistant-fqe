@@ -34,13 +34,17 @@ function createSmsAdapter(): SmsAdapter {
     );
     return {
       async sendSms() {
-        return { status: 'failed' };
+        return { status: 'failed', error: 'Brevo SMS is not configured (BREVO_API_KEY missing)' };
       },
     };
   }
 }
 
 const adapter = createSmsAdapter();
+
+if (adapter instanceof BrevoSmsAdapter) {
+  console.log(`[smsFactory] Brevo SMS enabled (sender: ${adapter.sender})`);
+}
 
 export const smsFactory = {
   sendSms(to: string, message: string) {

@@ -1,5 +1,4 @@
 import axios, { isAxiosError } from 'axios';
-import { API_URL } from '../config/env';
 
 declare global {
   interface Window {
@@ -34,7 +33,9 @@ export function getAuthToken(): string | null {
 }
 
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL:
+    process.env.EXPO_PUBLIC_API_URL ||
+    'https://p01--reit-assistant-v2--99vpsnwm46h4.code.run',
   headers: {
     'Content-Type': 'application/json',
   },
