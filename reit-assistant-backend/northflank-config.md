@@ -50,6 +50,7 @@ Share → Email and Share → SMS both use the **Brevo REST API** (`BREVO_API_KE
 | `BREVO_API_KEY` | **For share email & SMS** | Brevo REST API key (transactional email + SMS) |
 | `BREVO_SENDER_EMAIL` | **For share email** | Verified sender, e.g. `reports@fletcherquillestates.com` |
 | `BREVO_SENDER_NAME` | No | Display name for outbound email (default in code: `REIT Assistant`) |
+| `BREVO_SMS_SENDER` | No | Alphanumeric SMS sender registered in Brevo (defaults to `BREVO_SENDER_NAME`) |
 
 **Northflank / Brevo:** Whitelist the platform egress IP in Brevo → Security → Authorized IPs, or disable IP blocking.
 

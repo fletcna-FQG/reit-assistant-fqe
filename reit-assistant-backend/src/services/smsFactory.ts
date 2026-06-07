@@ -1,28 +1,43 @@
 import { ActionAcceleratedAdapter } from '../adapters/ActionAcceleratedAdapter';
+import { BrevoSmsAdapter } from '../adapters/BrevoSmsAdapter';
 import { GoHighLevelAdapter } from '../adapters/GoHighLevelAdapter';
 import type { SmsAdapter } from '../adapters/types';
 
 function createSmsAdapter(): SmsAdapter {
-  const provider = (process.env.SMS_PROVIDER ?? 'ghl').toLowerCase();
+  const provider = (process.env.SMS_PROVIDER ?? 'brevo').toLowerCase();
 
   if (provider === 'action_accelerated') {
     return new ActionAcceleratedAdapter();
   }
 
-  const apiKey = process.env.GHL_API_KEY?.trim();
-  const locationId = process.env.GHL_LOCATION_ID?.trim();
+  if (provider === 'ghl') {
+    const apiKey = process.env.GHL_API_KEY?.trim();
+    const locationId = process.env.GHL_LOCATION_ID?.trim();
 
-  if (!apiKey || !locationId) {
-    console.warn('[smsFactory] GHL_API_KEY or GHL_LOCATION_ID missing — using stub GHL adapter');
+    if (!apiKey || !locationId) {
+      console.warn('[smsFactory] GHL_API_KEY or GHL_LOCATION_ID missing — SMS via GHL unavailable');
+      return {
+        async sendSms() {
+          return { status: 'failed' };
+        },
+      };
+    }
+
+    return new GoHighLevelAdapter({ apiKey, locationId });
+  }
+
+  try {
+    return new BrevoSmsAdapter();
+  } catch (error) {
+    console.warn(
+      `[smsFactory] ${error instanceof Error ? error.message : String(error)} — SMS via Brevo unavailable`,
+    );
     return {
-      async sendSms(to, message) {
-        console.log('Sending SMS via GHL (stub)...', { to, messageLength: message.length });
-        return { status: 'sent', messageId: 'mock-ghl-id' };
+      async sendSms() {
+        return { status: 'failed' };
       },
     };
   }
-
-  return new GoHighLevelAdapter({ apiKey, locationId });
 }
 
 const adapter = createSmsAdapter();
