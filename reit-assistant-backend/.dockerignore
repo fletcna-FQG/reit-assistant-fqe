@@ -1,0 +1,12 @@
+node_modules
+dist
+.env
+.env.*
+!.env.example
+npm-debug.log*
+.git
+.gitignore
+*.md
+!northflank-config.md
+scripts/get-token.ts
+scripts/trace-analyze-insert.ts

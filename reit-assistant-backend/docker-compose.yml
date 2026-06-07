@@ -1,0 +1,28 @@
+# Local container testing for the REIT Assistant API.
+# Supabase stays on Supabase Cloud — set SUPABASE_* in .env (not run locally here).
+# Redis is included for geocode rate-limit / queue features that use REDIS_URL.
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
