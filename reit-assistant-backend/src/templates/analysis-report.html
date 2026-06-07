@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FQ Estates — Analysis Report</title>
+    <style>
+      :root {
+        --navy: #003366;
+        --navy-light: #004080;
+        --emerald: #28a745;
+        --alert-red: #dc3545;
+        --light-gray: #f5f5f5;
+        --medium-gray: #e0e0e0;
+        --text-primary: #2c3e50;
+        --text-secondary: #7f8c8d;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        color: var(--text-primary);
+        background: #fff;
+        font-size: 11pt;
+        line-height: 1.45;
+      }
+
+      .page {
+        padding: 32px 40px;
+      }
+
+      .brand-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 4px solid var(--navy);
+        padding-bottom: 16px;
+        margin-bottom: 24px;
+      }
+
+      .brand-mark {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand-logo {
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+        background: var(--navy);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 14px;
+      }
+
+      .brand-title {
+        margin: 0;
+        font-size: 20pt;
+        color: var(--navy);
+      }
+
+      .brand-subtitle {
+        margin: 2px 0 0;
+        color: var(--text-secondary);
+        font-size: 10pt;
+      }
+
+      .meta {
+        text-align: right;
+        font-size: 9pt;
+        color: var(--text-secondary);
+      }
+
+      .property-header {
+        display: grid;
+        grid-template-columns: 1fr 220px;
+        gap: 24px;
+        margin-bottom: 28px;
+      }
+
+      .property-header h2 {
+        margin: 0 0 8px;
+        font-size: 18pt;
+        color: var(--navy);
+      }
+
+      .property-header .address {
+        margin: 0;
+        color: var(--text-secondary);
+      }
+
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin: 20px 0 28px;
+      }
+
+      .kpi-card {
+        background: var(--light-gray);
+        border: 1px solid var(--medium-gray);
+        border-radius: 8px;
+        padding: 12px 14px;
+      }
+
+      .kpi-label {
+        font-size: 9pt;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .kpi-value {
+        margin-top: 4px;
+        font-size: 14pt;
+        font-weight: 700;
+        color: var(--navy);
+      }
+
+      .score-panel {
+        border: 2px solid var(--medium-gray);
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+        background: #fff;
+      }
+
+      .score-panel h3 {
+        margin: 0 0 12px;
+        font-size: 11pt;
+        color: var(--navy);
+      }
+
+      .score-gauge-wrap {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 8px;
+      }
+
+      .recommendation-pill {
+        display: inline-block;
+        margin-top: 8px;
+        padding: 6px 14px;
+        border-radius: 999px;
+        background: var(--emerald);
+        color: #fff;
+        font-weight: 700;
+        font-size: 10pt;
+      }
+
+      section {
+        margin-bottom: 28px;
+      }
+
+      section h3 {
+        margin: 0 0 12px;
+        font-size: 13pt;
+        color: var(--navy);
+        border-left: 4px solid var(--navy);
+        padding-left: 10px;
+      }
+
+      .summary {
+        background: var(--light-gray);
+        border-radius: 8px;
+        padding: 16px 18px;
+        border: 1px solid var(--medium-gray);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 8px;
+      }
+
+      th,
+      td {
+        border: 1px solid var(--medium-gray);
+        padding: 8px 10px;
+        text-align: left;
+      }
+
+      th {
+        background: var(--navy);
+        color: #fff;
+        font-weight: 600;
+      }
+
+      tr:nth-child(even) td {
+        background: var(--light-gray);
+      }
+
+      .two-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+
+      .list-card {
+        border: 1px solid var(--medium-gray);
+        border-radius: 8px;
+        padding: 14px 16px;
+        min-height: 180px;
+      }
+
+      .list-card h4 {
+        margin: 0 0 10px;
+        font-size: 11pt;
+        color: var(--navy);
+      }
+
+      .list-card.risks h4 {
+        color: var(--alert-red);
+      }
+
+      .list-card ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+
+      .list-card li {
+        margin-bottom: 10px;
+      }
+
+      .list-card li strong {
+        display: block;
+        color: var(--text-primary);
+      }
+
+      .list-card li span {
+        color: var(--text-secondary);
+        font-size: 10pt;
+      }
+
+      .footer {
+        margin-top: 32px;
+        padding-top: 12px;
+        border-top: 1px solid var(--medium-gray);
+        font-size: 8pt;
+        color: var(--text-secondary);
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header class="brand-bar">
+        <div class="brand-mark">
+          <div class="brand-logo">FQ</div>
+          <div>
+            <h1 class="brand-title">Fletcher Quill Estates</h1>
+            <p class="brand-subtitle">REIT Assistant — Investment Analysis Report</p>
+          </div>
+        </div>
+        <div class="meta">
+          <div>Generated: {{GENERATED_AT}}</div>
+          <div>Confidential — For internal use only</div>
+        </div>
+      </header>
+
+      <div class="property-header">
+        <div>
+          <h2>{{PROPERTY_NAME}}</h2>
+          <p class="address">{{ADDRESS}}</p>
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-label">Net Operating Income</div>
+              <div class="kpi-value">{{NOI}}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Cap Rate</div>
+              <div class="kpi-value">{{CAP_RATE}}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Projected ROI</div>
+              <div class="kpi-value">{{ROI}}</div>
+            </div>
+          </div>
+        </div>
+        <aside class="score-panel">
+          <h3>Rules Engine Score</h3>
+          <div class="score-gauge-wrap">{{SCORE_GAUGE}}</div>
+          <div class="recommendation-pill">{{RECOMMENDATION}}</div>
+        </aside>
+      </div>
+
+      <section>
+        <h3>Executive Summary</h3>
+        <div class="summary">{{EXECUTIVE_SUMMARY}}</div>
+      </section>
+
+      <section>
+        <h3>Five-Year Financial Projection</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Year</th>
+              <th>Projected NOI</th>
+              <th>Projected Value</th>
+              <th>Cash Flow</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{FINANCIAL_TABLE_ROWS}}
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h3>Risks &amp; Opportunities</h3>
+        <div class="two-col">
+          <div class="list-card risks">
+            <h4>Key Risks</h4>
+            <ul>{{RISK_LIST}}</ul>
+          </div>
+          <div class="list-card opportunities">
+            <h4>Opportunities</h4>
+            <ul>{{OPPORTUNITY_LIST}}</ul>
+          </div>
+        </div>
+      </section>
+
+      <footer class="footer">
+        Fletcher Quill Estates Inc. · REIT Assistant · This report was generated automatically by the Rules Engine.
+      </footer>
+    </div>
+  </body>
+</html>

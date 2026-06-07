@@ -48,7 +48,9 @@ RUN npm ci
 COPY tsconfig.json ./
 COPY src ./src
 
-RUN npm run build && cp -r src/templates dist/templates
+RUN npm run build
+
+RUN if [ -d 'src/templates' ]; then cp -r src/templates dist/templates; else mkdir -p dist/templates; fi
 
 ENV NODE_ENV=production
 ENV PORT=3000

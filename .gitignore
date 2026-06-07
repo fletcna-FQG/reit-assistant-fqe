@@ -64,6 +64,10 @@ deliverables/
 **/mockups/
 **/prototype/
 *.html
+!reit-assistant-backend/src/templates/
+!reit-assistant-backend/src/templates/**
+!reit-assistant-backend/supabase/email-templates/
+!reit-assistant-backend/supabase/email-templates/**
 
 # Temporary / cache / logs
 tmp/
