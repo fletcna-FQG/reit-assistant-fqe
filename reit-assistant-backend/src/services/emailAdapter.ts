@@ -1,9 +1,9 @@
 import type { EmailSendResult } from '../adapters/types';
+import { readBrevoApiError, resolveBrevoEmailSenderName } from '../utils/brevoErrors';
 
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 const NAVY = '#003366';
 const EMERALD = '#00A859';
-const SENDER_NAME = 'FQ Estates';
 
 function escapeHtml(value: string): string {
   return value
@@ -86,17 +86,20 @@ export async function sendEmail(
   const senderEmail = process.env.BREVO_SENDER_EMAIL?.trim();
 
   if (!apiKey || apiKey === 'your-brevo-api-key-here') {
-    console.error('[Brevo] BREVO_API_KEY is missing or still set to the placeholder value.');
-    return { status: 'failed' };
+    const error = 'BREVO_API_KEY is missing or invalid on the server.';
+    console.error(`[Brevo] ${error}`);
+    return { status: 'failed', error };
   }
 
   if (!senderEmail) {
-    console.error('[Brevo] BREVO_SENDER_EMAIL is required (must be a verified sender in Brevo).');
-    return { status: 'failed' };
+    const error = 'BREVO_SENDER_EMAIL is required (verified sender in Brevo).';
+    console.error(`[Brevo] ${error}`);
+    return { status: 'failed', error };
   }
 
   const emailSubject =
     subject.trim() || `FQ Estates: REIT Analysis Report for ${propertyName}`;
+  const senderName = resolveBrevoEmailSenderName();
 
   try {
     const response = await fetch(BREVO_API_URL, {
@@ -107,7 +110,7 @@ export async function sendEmail(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        sender: { name: SENDER_NAME, email: senderEmail },
+        sender: { name: senderName, email: senderEmail },
         to: [{ email: to.trim() }],
         subject: emailSubject,
         htmlContent: buildHtmlContent(propertyName, pdfUrl),
@@ -115,32 +118,18 @@ export async function sendEmail(
       }),
     });
 
-    if (response.status === 401) {
-      const error = await response.text();
-      if (error.includes('unrecognised IP') || error.includes('unrecognized IP')) {
-        console.error('[Brevo] IP address not authorized — add your IP at https://app.brevo.com/security/authorised_ips');
-      } else {
-        console.error('[Brevo] Invalid API Key');
-      }
-      console.error('[Brevo] Send failed:', error);
-      return { status: 'failed' };
-    }
-
     if (!response.ok) {
-      const error = await response.text();
-      if (response.status === 400 || response.status >= 500) {
-        console.error(`[Brevo] Send failed: ${error}`);
-      } else {
-        console.error(`[Brevo] Send failed: ${error}`);
-      }
-      return { status: 'failed' };
+      const error = await readBrevoApiError(response, 'email');
+      console.error('[Brevo] Send failed:', error, { to, senderEmail, status: response.status });
+      return { status: 'failed', error };
     }
 
     const data = (await response.json()) as { messageId?: string };
-    console.log('[Brevo] Email sent', { to, messageId: data.messageId });
+    console.log('[Brevo] Email sent', { to, messageId: data.messageId, senderEmail });
     return { status: 'sent', messageId: data.messageId };
   } catch (error) {
-    console.error(`[Brevo] Send failed: ${error instanceof Error ? error.message : String(error)}`);
-    return { status: 'failed' };
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[Brevo] Send failed: ${message}`);
+    return { status: 'failed', error: message };
   }
 }

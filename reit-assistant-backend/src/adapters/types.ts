@@ -7,6 +7,7 @@ export type SmsSendResult = {
 export type EmailSendResult = {
   status: 'sent' | 'failed';
   messageId?: string;
+  error?: string;
 };
 
 export interface SmsAdapter {

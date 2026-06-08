@@ -100,10 +100,8 @@ api.interceptors.response.use(
       return Promise.reject(new Error('Your session expired. Please sign in again.'));
     }
 
-    const message =
-      (error.response?.data as { message?: string })?.message ??
-      error.message ??
-      'Network error';
+    const data = error.response?.data as { message?: string; error?: string } | undefined;
+    const message = data?.message ?? data?.error ?? error.message ?? 'Network error';
     return Promise.reject(new Error(message));
   },
 );

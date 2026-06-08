@@ -390,6 +390,7 @@ router.post('/share', async (req: Request, res: Response) => {
         .map(({ recipient: emailRecipient }) => emailRecipient);
       const sentCount = emailResults.length - failedRecipients.length;
       const recipientSummary = shareRecipients.join(', ');
+      const deliveryError = emailResults.find(({ result }) => result.error)?.result.error;
 
       await logShareAudit(tenantId, userId, 'SHARE_EMAIL', {
         property_id: propertyId,
@@ -400,6 +401,7 @@ router.post('/share', async (req: Request, res: Response) => {
         status: failedRecipients.length ? (sentCount ? 'partial' : 'failed') : 'sent',
         sent_count: sentCount,
         failed_recipients: failedRecipients,
+        ...(deliveryError ? { delivery_error: deliveryError } : {}),
       });
 
       if (!sentCount) {
@@ -407,6 +409,7 @@ router.post('/share', async (req: Request, res: Response) => {
           success: false,
           url: reportUrl,
           error: 'Email delivery failed',
+          message: deliveryError ?? 'Email delivery failed',
           failedRecipients,
         });
       }

@@ -1,4 +1,5 @@
 import type { SmsAdapter, SmsSendResult } from './types';
+import { readBrevoApiError } from '../utils/brevoErrors';
 
 const BREVO_SMS_URL = 'https://api.brevo.com/v3/transactionalSMS/send';
 const DEFAULT_SMS_SENDER = 'FQEstates';
@@ -46,15 +47,7 @@ export function normalizePhoneNumber(to: string): string {
 }
 
 async function readBrevoError(response: Response): Promise<string> {
-  try {
-    const data = (await response.json()) as { message?: string; code?: string };
-    if (data.message?.includes('unrecognised IP') || data.message?.includes('unrecognized IP')) {
-      return 'Brevo blocked this server IP — whitelist Northflank egress in Brevo → Security → Authorized IPs.';
-    }
-    return data.message ?? `Brevo SMS error (${response.status})`;
-  } catch {
-    return `Brevo SMS error (${response.status})`;
-  }
+  return readBrevoApiError(response, 'sms');
 }
 
 export class BrevoSmsAdapter implements SmsAdapter {
