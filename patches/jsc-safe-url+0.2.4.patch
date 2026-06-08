@@ -1,0 +1,18 @@
+diff --git a/node_modules/jsc-safe-url/index.js b/node_modules/jsc-safe-url/index.js
+index b64d03f..e2b58fc 100644
+--- a/node_modules/jsc-safe-url/index.js
++++ b/node_modules/jsc-safe-url/index.js
+@@ -71,9 +71,10 @@ function toJscSafeUrl(urlToConvert /*:string */) /*:string */ {
+     parsedUrl.queryWithoutQuestionMark.length > 0 &&
+     (parsedUrl.path === "" || parsedUrl.path === "/")
+   ) {
+-    throw new Error(
+-      `The given URL "${urlToConvert}" has an empty path and cannot be converted to a JSC-safe format.`
+-    );
++    // Metro web dev URLs (e.g. http://localhost:8081/?platform=web) have an empty
++    // path. JSC-safe rewriting is for iOS JavaScriptCore stack traces only; web
++    // uses Chrome/Firefox — return the original URL unchanged.
++    return urlToConvert;
+   }
+   return (
+     parsedUrl.schemeAndAuthority +

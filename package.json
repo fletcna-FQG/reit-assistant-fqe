@@ -9,7 +9,8 @@
     "web": "expo start --web",
     "web:dev": "expo start --web --clear --localhost",
     "export:web": "expo export --platform web",
-    "docker:web": "docker build -f Dockerfile.web -t reit-assistant-web ."
+    "docker:web": "docker build -f Dockerfile.web -t reit-assistant-web .",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -45,6 +46,7 @@
   "devDependencies": {
     "@expo/metro-runtime": "~6.1.2",
     "@types/react": "~19.1.0",
+    "patch-package": "^8.0.1",
     "typescript": "~5.9.2"
   },
   "private": true
